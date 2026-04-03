@@ -25,19 +25,45 @@ local function Init(self, gui : ScreenGui)
 	local remoteEventFolder = ReplicatedStorage:WaitForChild("RemoteEvent")
 	local timeEvent = remoteEventFolder:WaitForChild("TimeUpdate")
 	if not timeEvent:IsA("RemoteEvent") then return end
-	
+
 	local frame = gui:WaitForChild("Frame")
 	local textLabel = frame:WaitForChild("TextLabel") :: TextLabel
-	
+	local joinButton = frame:WaitForChild("JoinButton") :: TextButton
+
+	-- BattleJoinEventを待機取得
+	local joinEvent
+	task.spawn(function()
+		joinEvent = remoteEventFolder:WaitForChild("BattleJoinEvent", 30)
+	end)
+
+	local hasJoined = false
+
+	joinButton.MouseButton1Click:Connect(function()
+		if hasJoined then return end
+		if joinEvent and joinEvent:IsA("RemoteEvent") then
+			joinEvent:FireServer()
+			hasJoined = true
+			joinButton.Text = "参加済み！"
+		end
+	end)
+
 	timeEvent.OnClientEvent:Connect(function(seconds: number, state: string?)
 		if seconds == 0 then
 			textLabel.Text = ""
+			joinButton.Visible = false
 		elseif state == "Break" then
 			textLabel.Text = string.format("break (%d)", seconds)
+			joinButton.Visible = true
+			-- Break開始時にボタンをリセット
+			if seconds == 20 then
+				hasJoined = false
+				joinButton.Text = "参加する"
+			end
 		else
 			local m = math.floor(seconds / 60)
 			local s = seconds % 60
 			textLabel.Text = string.format("%02d:%02d", m, s)
+			joinButton.Visible = false
 		end
 	end)
 end

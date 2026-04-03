@@ -35,6 +35,7 @@ local BattleStatus = {
 local currentBattleStatus = BattleStatus.Idle
 local playerAddedConnection: RBXScriptConnection?
 local playerRemovingConnection: RBXScriptConnection?
+local joinedPlayers: { [Player]: boolean } = {}  -- 「参加する」ボタンを押したプレイヤーのセット
 
 -- ===================== RemoteEvent =====================
 local function GetRemoteEvent(eventName: string): RemoteEvent
@@ -54,21 +55,45 @@ local function GetRemoteEvent(eventName: string): RemoteEvent
 	return event
 end
 
+-- BattleJoinEventのリスナを設定する(初回かつ一度だけ呈負する)
+local joinEventConnection: RBXScriptConnection?
+local function SetupJoinEvent()
+	if joinEventConnection then return end
+	local ev = GetRemoteEvent("BattleJoinEvent")
+	joinEventConnection = ev.OnServerEvent:Connect(function(player: Player)
+		-- バトルがアクティブ中は受付けない
+		if currentBattleStatus ~= BattleStatus.Idle then return end
+		joinedPlayers[player] = true
+		print("[Join] " .. player.Name .. " joined the next battle")
+	end)
+end
+
 -- ===================== Remote Fire =====================
+
+-- バトル参加者のプレイヤーにのみ FireClient するユーティリティ
+local function FireParticipants(event: RemoteEvent, ...)
+	for _, character in ipairs(battleParticipants.players) do
+		local player = Players:GetPlayerFromCharacter(character)
+		if player then
+			event:FireClient(player, ...)
+		end
+	end
+end
+
 local function FireBattleStatus(isActive: boolean)
-	GetRemoteEvent("BattleStatus"):FireAllClients(isActive)
+	FireParticipants(GetRemoteEvent("BattleStatus"), isActive)
 end
 
 local function FireFadeEvent(isOut: boolean, isWhite: boolean?)
-	GetRemoteEvent("FadeEvent"):FireAllClients(isOut, isWhite)
+	FireParticipants(GetRemoteEvent("FadeEvent"), isOut, isWhite)
 end
 
 local function FireTimeUpEvent()
-	GetRemoteEvent("TimeUpEvent"):FireAllClients()
+	FireParticipants(GetRemoteEvent("TimeUpEvent"))
 end
 
 local function FireCountDownEvent()
-	GetRemoteEvent("CountDownEvent"):FireAllClients()
+	FireParticipants(GetRemoteEvent("CountDownEvent"))
 end
 
 -- ===================== 参加者ユーティリティ =====================
@@ -200,7 +225,7 @@ end
 
 -- ===================== テレポート =====================
 local function TeleportParticipants()
-	local spawnFolder = workspace:FindFirstChild("SpawnPositions")
+	local spawnFolder = workspace:FindFirstChild("SpawnPositions", true)
 	local spawnCFrames = {}
 	if spawnFolder then
 		for _, sp in ipairs(spawnFolder:GetChildren()) do
@@ -281,7 +306,7 @@ local function UpdateRanking()
 		table.insert(topRanking, rankingData[i])
 	end
 
-	GetRemoteEvent("RankingUpdate"):FireAllClients(topRanking)
+	FireParticipants(GetRemoteEvent("RankingUpdate"), topRanking)
 	return topRanking
 end
 
@@ -345,7 +370,7 @@ local function RunTeamSelectionPhase(participants: { Model })
 
 	-- クライアントへUI表示を要求
 	local showTeamSelectionEvent = GetRemoteEvent("ShowTeamSelectionEvent")
-	showTeamSelectionEvent:FireAllClients(teams.blue.avatar, teams.red.avatar)
+	FireParticipants(showTeamSelectionEvent, teams.blue.avatar, teams.red.avatar)
 
 	-- クライアントからの選択受付イベント
 	local teamSelectedEvent = GetRemoteEvent("OnTeamSelectedEvent")
@@ -380,7 +405,7 @@ local function RunTeamSelectionPhase(participants: { Model })
 	connection:Disconnect()
 	
 	-- UI側にタイムアウトを知らせるイベントを通達(任意で利用)
-	GetRemoteEvent("TeamSelectionEndEvent"):FireAllClients()
+	FireParticipants(GetRemoteEvent("TeamSelectionEndEvent"))
 
 	-- タイムアウト時: 未選択者を均等割り振り
 	if timedOut then
@@ -599,7 +624,7 @@ local function ShowRouletteOnClient(allParticipants: { Model }, selection: { Mod
 	local allData, selData = {}, {}
 	for _, m in ipairs(allParticipants) do table.insert(allData, CreateData(m)) end
 	for _, m in ipairs(selection) do table.insert(selData, CreateData(m)) end
-	rouletteEvent:FireAllClients(allData, selData)
+	FireParticipants(rouletteEvent, allData, selData)
 end
 
 -- ===================== BattleManager Public API =====================
@@ -624,6 +649,7 @@ function BattleManager.Start()
 	print("BattleManager.Start")
 	currentBattleStatus = BattleStatus.Preparing
 	PodiumHandler.Reset()
+	SetupJoinEvent() -- 参加イベントリスナを一度だけ登録
 
 	-- RemoteEventの事前生成 (クライアントのWaitForChild漏れを防ぐ)
 	GetRemoteEvent("ShowTeamSelectionEvent")
@@ -638,13 +664,14 @@ function BattleManager.Start()
 	teams.red  = { avatar = nil, members = {}, hitCount = 0 }
 	participantTeam = {}
 
-	-- 1. プレイヤーキャラ収集
-	for _, player in ipairs(Players:GetPlayers()) do
+	-- 1. 「参加する」ボタンを押したプレイヤーのみ収集
+	for player, _ in pairs(joinedPlayers) do
 		if player.Character then
 			table.insert(battleParticipants.players, player.Character)
 			hitCounts[player.Character.Name] = 0
 		end
 	end
+	joinedPlayers = {} -- 次のバトルに向けてリセット
 
 	-- 2. NPC補充 (MAX_PARTICIPANTS に満たない分)
 	local npcNum = math.max(0, MAX_PARTICIPANTS - #battleParticipants.players)
@@ -744,7 +771,7 @@ function BattleManager.Stop()
 	-- チーム勝敗判定
 	local winner = if teams.blue.hitCount >= teams.red.hitCount then "blue" else "red"
 	print("[Result] " .. winner .. " wins! (blue=" .. teams.blue.hitCount .. " / red=" .. teams.red.hitCount .. ")")
-	GetRemoteEvent("TeamBattleResult"):FireAllClients(winner, teams.blue.hitCount, teams.red.hitCount)
+	FireParticipants(GetRemoteEvent("TeamBattleResult"), winner, teams.blue.hitCount, teams.red.hitCount)
 
 	PodiumHandler.Display(topRanking, battleParticipants)
 	WandAssigner.RemoveWands(battleParticipants.players)
@@ -835,5 +862,8 @@ end
 
 playerAddedConnection   = Players.PlayerAdded:Connect(OnPlayerAdded)
 playerRemovingConnection = Players.PlayerRemoving:Connect(OnPlayerRemoving)
+
+-- モジュール読み込み時に即座実行し、BattleJoinEventを事前生成
+SetupJoinEvent()
 
 return BattleManager

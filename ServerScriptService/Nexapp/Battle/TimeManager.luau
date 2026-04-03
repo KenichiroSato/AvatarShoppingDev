@@ -28,7 +28,7 @@ function TimeManager.Start()
 	task.spawn(function()
 		while true do
 			-- 30 seconds count
-			for i = 5, 0, -1 do
+			for i = 20, 0, -1 do
 				remoteEvent:FireAllClients(i, "Break")
 				task.wait(1)
 			end
@@ -36,7 +36,7 @@ function TimeManager.Start()
 			BattleManager.Start()
 			
 			-- 3 minutes count
-			for i = 80, 0, -1 do
+			for i = 30, 0, -1 do
 				remoteEvent:FireAllClients(i, "Battle")
 				task.wait(1)
 			end

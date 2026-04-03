@@ -147,8 +147,13 @@ function PodiumHandler.Display(topRanking, battleParticipants)
 			podiumCutsceneEvent.Parent = remoteEventFolder
 		end
 		
-		
-		podiumCutsceneEvent:FireAllClients()
+		-- バトル参加者のプレイヤーにのみカットシーンを通知
+		for _, character in ipairs(battleParticipants.players) do
+			local player = Players:GetPlayerFromCharacter(character)
+			if player then
+				podiumCutsceneEvent:FireClient(player)
+			end
+		end
 		-- task.wait(Define.PODIUM_CUTSCENE_TIME) -- Handled in BattleManager now
 	end
 end
