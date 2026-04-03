@@ -83,7 +83,7 @@ end
 --========================
 -- Private Method: GUI構築
 --========================
-local function CreateGUI(blueLeader: Model, redLeader: Model)
+local function CreateGUI(blueAvatar: Model, redAvatar: Model)
 	if screenGui then
 		screenGui:Destroy()
 	end
@@ -120,7 +120,7 @@ local function CreateGUI(blueLeader: Model, redLeader: Model)
 	uiTextSize.MaxTextSize = 60
 	uiTextSize.Parent = title
 
-	local function CreateTeamPanel(teamName: string, color: Color3, posScaleX: number, leaderModel: Model)
+	local function CreateTeamPanel(teamName: string, color: Color3, posScaleX: number, avatarModel: Model)
 		local panel = Instance.new("Frame")
 		panel.Size = UDim2.new(0.35, 0, 0.6, 0)
 		panel.Position = UDim2.new(posScaleX, 0, 0.55, 0)
@@ -154,8 +154,8 @@ local function CreateGUI(blueLeader: Model, redLeader: Model)
 		viewport.Parent = panel
 
 		-- セットアップ
-		if leaderModel then
-			SetupViewport(viewport, leaderModel)
+		if avatarModel then
+			SetupViewport(viewport, avatarModel)
 		end
 
 		-- 選択ボタン
@@ -196,10 +196,10 @@ local function CreateGUI(blueLeader: Model, redLeader: Model)
 		return panel
 	end
 
-	local bluePanel = CreateTeamPanel("blue", Color3.fromRGB(0, 120, 255), 0.28, blueLeader)
+	local bluePanel = CreateTeamPanel("blue", Color3.fromRGB(0, 120, 255), 0.28, blueAvatar)
 	bluePanel.Parent = mainFrame
 
-	local redPanel = CreateTeamPanel("red", Color3.fromRGB(255, 50, 50), 0.72, redLeader)
+	local redPanel = CreateTeamPanel("red", Color3.fromRGB(255, 50, 50), 0.72, redAvatar)
 	redPanel.Parent = mainFrame
 
 	local targetScreenGui = screenGui
@@ -231,9 +231,9 @@ function TeamSelectionGui_.Setup()
 
 	local showEvent = remoteEventFolder:WaitForChild("ShowTeamSelectionEvent", 10)
 	if showEvent and showEvent:IsA("RemoteEvent") then
-		_connectionShow = showEvent.OnClientEvent:Connect(function(blueLeader, redLeader)
+		_connectionShow = showEvent.OnClientEvent:Connect(function(blueAvatar, redAvatar)
 			print("TeamSelectionGui: Received ShowTeamSelectionEvent")
-			CreateGUI(blueLeader, redLeader)
+			CreateGUI(blueAvatar, redAvatar)
 		end)
 	end
 	

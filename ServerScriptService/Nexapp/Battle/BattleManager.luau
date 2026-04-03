@@ -17,8 +17,8 @@ local battleParticipants = { npcs = {}, players = {} }
 local hitCounts = {}
 
 local teams = {
-	blue = { leader = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
-	red  = { leader = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
+	blue = { avatar = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
+	red  = { avatar = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
 }
 local participantTeam: { [string]: string } = {}  -- [characterName] = "blue" | "red"
 local originalDescriptions: { [string]: HumanoidDescription } = {}  -- バトル前の外見を保存
@@ -345,7 +345,7 @@ local function RunTeamSelectionPhase(participants: { Model })
 
 	-- クライアントへUI表示を要求
 	local showTeamSelectionEvent = GetRemoteEvent("ShowTeamSelectionEvent")
-	showTeamSelectionEvent:FireAllClients(teams.blue.leader, teams.red.leader)
+	showTeamSelectionEvent:FireAllClients(teams.blue.avatar, teams.red.avatar)
 
 	-- クライアントからの選択受付イベント
 	local teamSelectedEvent = GetRemoteEvent("OnTeamSelectedEvent")
@@ -407,11 +407,19 @@ local function RunTeamSelectionPhase(participants: { Model })
 	print("[TeamSelect] Done. Blue=" .. #teams.blue.members .. " / Red=" .. #teams.red.members)
 end
 
--- リーダーをランダムに2人選出してチームに設定する
-local function SelectTeamLeaders(allParticipants: { Model })
-	local rng = Random.new(tick())
+-- チームアバターをランダムに2人選出してチームに設定する
+local function SelectTeamAvatars(allParticipants: { Model })
+	local rng = Random.new()
+	
+	-- 重複登録（同じ人が2回以上リストに入っているバグ）を防ぐ
 	local pool = {}
-	for _, m in ipairs(allParticipants) do table.insert(pool, m) end
+	local seen = {}
+	for _, m in ipairs(allParticipants) do 
+		if m and not seen[m] then
+			seen[m] = true
+			table.insert(pool, m) 
+		end
+	end
 
 	-- Shuffle
 	for i = #pool, 2, -1 do
@@ -419,55 +427,44 @@ local function SelectTeamLeaders(allParticipants: { Model })
 		pool[i], pool[j] = pool[j], pool[i]
 	end
 
-	teams.blue.leader = pool[1]
-	teams.red.leader  = pool[2]
+	teams.blue.avatar = pool[1]
+	-- 万が一参加者が1人しかいない(NPCも生成されなかった)場合は、同じ人を選ばずにnilにする
+	teams.red.avatar  = pool[2]
 
-	-- リーダー自身のチームを確定（members ではなく leader として扱う）
-	participantTeam[pool[1].Name] = "blue"
-	participantTeam[pool[2].Name] = "red"
-
-	print("[TeamSelect] Blue leader=" .. pool[1].Name .. " / Red leader=" .. pool[2].Name)
+	local bName = teams.blue.avatar and teams.blue.avatar.Name or "None"
+	local rName = teams.red.avatar and teams.red.avatar.Name or "None"
+	print("[TeamSelect] Blue avatar=" .. bName .. " / Red avatar=" .. rName)
 end
 
 -- チーム選択フェーズ全体を実行する
 local function ExecuteTeamSelectionPhase()
 	local allParticipants = GetAllParticipants()
 
-	-- 1. リーダー選出
-	SelectTeamLeaders(allParticipants)
+	-- 1. チームアバター選出
+	SelectTeamAvatars(allParticipants)
 
-	-- 2. Fieldの両端を計算してリーダーを配置
+	-- 2. Fieldの両端を計算してアバターを配置
 	local blueCF, redCF = GetFieldEndCFrames()
-	if teams.blue.leader then
+	if teams.blue.avatar then
 		local facingDir = redCF.Position
 		local pos = blueCF.Position + Vector3.new(0, 1.5, 0)
-		teams.blue.leader:PivotTo(CFrame.lookAt(pos, Vector3.new(facingDir.X, pos.Y, facingDir.Z)))
+		teams.blue.avatar:PivotTo(CFrame.lookAt(pos, Vector3.new(facingDir.X, pos.Y, facingDir.Z)))
 	end
-	if teams.red.leader then
+	if teams.red.avatar then
 		local facingDir = blueCF.Position
 		local pos = redCF.Position + Vector3.new(0, 1.5, 0)
-		teams.red.leader:PivotTo(CFrame.lookAt(pos, Vector3.new(facingDir.X, pos.Y, facingDir.Z)))
+		teams.red.avatar:PivotTo(CFrame.lookAt(pos, Vector3.new(facingDir.X, pos.Y, facingDir.Z)))
 	end
 
-	-- 3. リーダーを含む全員が UI でチームを選択
+	-- 3. アバターを含めた全員が UI でチームを選択
 	RunTeamSelectionPhase(allParticipants)
 end
 
 -- ===================== チーム外見統一 =====================
 
--- リーダーの HumanoidDescription を取得する
-local function GetLeaderHumanoidDescription(leader: Model): HumanoidDescription?
-	-- プレイヤーキャラなら UserId から取得（最も正確）
-	local player = Players:GetPlayerFromCharacter(leader)
-	if player then
-		local success, desc = pcall(function()
-			return Players:GetHumanoidDescriptionFromUserId(player.UserId)
-		end)
-		if success and desc then return desc end
-	end
-
-	-- NPC または取得失敗時: Humanoid の AppliedDescription から取得
-	local humanoid = leader:FindFirstChildOfClass("Humanoid")
+-- チームアバターの HumanoidDescription を取得する
+local function GetTeamAvatarHumanoidDescription(avatar: Model): HumanoidDescription?
+	local humanoid = avatar:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		local success, desc = pcall(function()
 			return humanoid:GetAppliedDescription()
@@ -478,32 +475,35 @@ local function GetLeaderHumanoidDescription(leader: Model): HumanoidDescription?
 	return nil
 end
 
--- 各チームメンバーの見た目をリーダーに揃える
+-- 各チームメンバーの見た目をチームアバターに揃える
 local function ApplyTeamAppearance()
-	local leaderDescriptions = {}
+	local avatarDescriptions = {}
 
-	-- 1. 全員が着替え始める前に、まず全リーダーの服のデータ(Description)を安全に取得して保存しておく
+	-- 1. 全員が着替え始める前に、まず全チームアバターの服のデータ(Description)を安全に取得して保存しておく
 	for _, teamName in ipairs({"blue", "red"}) do
-		local leader = teams[teamName].leader
-		if leader then
-			local desc = GetLeaderHumanoidDescription(leader)
+		local avatar = teams[teamName].avatar
+		if avatar then
+			local desc = GetTeamAvatarHumanoidDescription(avatar)
 			if desc then
-				leaderDescriptions[teamName] = desc
+				avatarDescriptions[teamName] = desc
 			else
-				warn("[Appearance] Could not get HumanoidDescription for leader: " .. leader.Name)
+				warn("[Appearance] Could not get HumanoidDescription for avatar: " .. avatar.Name)
 			end
 		end
 	end
 
-	-- 2. 保存しておいたリーダーのデータをもとに、各チームのメンバーを一斉に着替えさせる
-	for teamName, desc in pairs(leaderDescriptions) do
+	-- 2. 保存しておいたアバターデータをもとに、各チームのメンバーを一斉に着替えさせる
+	for teamName, desc in pairs(avatarDescriptions) do
 		local team = teams[teamName]
-		local leader = team.leader
+		local avatar = team.avatar
 		
-		-- リーダー本人 + 全メンバーに適用
-		local targets = { leader }
+		-- チームアバター自身を除外した全メンバーにのみ着替えを適用する
+		-- (アバター本人の服を自分自身にApplyDescriptionするとRobloxのキャッシュ仕様によりスキップされ、脱がされたまま裸になるため)
+		local targets = {}
 		for _, member in ipairs(team.members) do
-			table.insert(targets, member)
+			if member ~= avatar then
+				table.insert(targets, member)
+			end
 		end
 
 		for _, character in ipairs(targets) do
@@ -519,16 +519,29 @@ local function ApplyTeamAppearance()
 					end
 				end
 
-				local success, err = pcall(function()
-					humanoid:ApplyDescription(desc)
-				end)
+				-- 通信エラー等を防ぐため、成功するまで最大3回リトライする
+				local maxRetries = 3
+				local success = false
+				local err = ""
+				for i = 1, maxRetries do
+					success, err = pcall(function()
+						humanoid:ApplyDescription(desc)
+					end)
+					if success then 
+						print("[Appearance] Applied description for " .. character.Name)
+						break
+					end
+					warn("[Appearance] Retry " .. i .. " failed for " .. character.Name .. ": " .. tostring(err))
+					task.wait(1)
+				end
+
 				if not success then
-					warn("[Appearance] ApplyDescription failed for " .. character.Name .. ": " .. tostring(err))
+					warn("[Appearance] ApplyDescription utterly failed for " .. character.Name)
 				end
 			end)
 		end
 
-		print("[Appearance] Applied " .. leader.Name .. "'s look to " .. #targets .. " members (" .. teamName .. " team)")
+		print("[Appearance] Applied " .. avatar.Name .. "'s look to " .. #targets .. " members (" .. teamName .. " team)")
 	end
 end
 
@@ -621,8 +634,8 @@ function BattleManager.Start()
 	battleParticipants.players = {}
 	battleParticipants.npcs    = {}
 	hitCounts = {}
-	teams.blue = { leader = nil, members = {}, hitCount = 0 }
-	teams.red  = { leader = nil, members = {}, hitCount = 0 }
+	teams.blue = { avatar = nil, members = {}, hitCount = 0 }
+	teams.red  = { avatar = nil, members = {}, hitCount = 0 }
 	participantTeam = {}
 
 	-- 1. プレイヤーキャラ収集
@@ -748,8 +761,8 @@ function BattleManager.Stop()
 	battleParticipants.npcs    = {}
 	battleParticipants.players = {}
 	hitCounts = {}
-	teams.blue = { leader = nil, members = {}, hitCount = 0 }
-	teams.red  = { leader = nil, members = {}, hitCount = 0 }
+	teams.blue = { avatar = nil, members = {}, hitCount = 0 }
+	teams.red  = { avatar = nil, members = {}, hitCount = 0 }
 	participantTeam = {}
 	originalDescriptions = {}
 	currentBattleStatus = BattleStatus.Idle
