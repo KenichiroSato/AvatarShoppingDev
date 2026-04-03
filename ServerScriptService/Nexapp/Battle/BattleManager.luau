@@ -407,35 +407,17 @@ local function RunTeamSelectionPhase(participants: { Model })
 	print("[TeamSelect] Done. Blue=" .. #teams.blue.members .. " / Red=" .. #teams.red.members)
 end
 
--- リーダーを選出してチームに設定する (プレイヤーを優先)
+-- リーダーをランダムに2人選出してチームに設定する
 local function SelectTeamLeaders(allParticipants: { Model })
 	local rng = Random.new(tick())
-	local playerPool = {}
-	local npcPool = {}
-
-	for _, m in ipairs(allParticipants) do
-		if IsPlayerCharacter(m) then
-			table.insert(playerPool, m)
-		else
-			table.insert(npcPool, m)
-		end
-	end
-
-	-- それぞれをシャッフル
-	local function Shuffle(pool)
-		for i = #pool, 2, -1 do
-			local j = rng:NextInteger(1, i)
-			pool[i], pool[j] = pool[j], pool[i]
-		end
-	end
-
-	Shuffle(playerPool)
-	Shuffle(npcPool)
-
-	-- プレイヤーを先頭に、NPCを後ろにしてプールを統合
 	local pool = {}
-	for _, m in ipairs(playerPool) do table.insert(pool, m) end
-	for _, m in ipairs(npcPool) do table.insert(pool, m) end
+	for _, m in ipairs(allParticipants) do table.insert(pool, m) end
+
+	-- Shuffle
+	for i = #pool, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		pool[i], pool[j] = pool[j], pool[i]
+	end
 
 	teams.blue.leader = pool[1]
 	teams.red.leader  = pool[2]
@@ -498,17 +480,26 @@ end
 
 -- 各チームメンバーの見た目をリーダーに揃える
 local function ApplyTeamAppearance()
+	local leaderDescriptions = {}
+
+	-- 1. 全員が着替え始める前に、まず全リーダーの服のデータ(Description)を安全に取得して保存しておく
 	for _, teamName in ipairs({"blue", "red"}) do
+		local leader = teams[teamName].leader
+		if leader then
+			local desc = GetLeaderHumanoidDescription(leader)
+			if desc then
+				leaderDescriptions[teamName] = desc
+			else
+				warn("[Appearance] Could not get HumanoidDescription for leader: " .. leader.Name)
+			end
+		end
+	end
+
+	-- 2. 保存しておいたリーダーのデータをもとに、各チームのメンバーを一斉に着替えさせる
+	for teamName, desc in pairs(leaderDescriptions) do
 		local team = teams[teamName]
 		local leader = team.leader
-		if not leader then continue end
-
-		local desc = GetLeaderHumanoidDescription(leader)
-		if not desc then
-			warn("[Appearance] Could not get HumanoidDescription for leader: " .. leader.Name)
-			continue
-		end
-
+		
 		-- リーダー本人 + 全メンバーに適用
 		local targets = { leader }
 		for _, member in ipairs(team.members) do
@@ -519,6 +510,15 @@ local function ApplyTeamAppearance()
 			task.spawn(function()
 				local humanoid = character:FindFirstChildOfClass("Humanoid")
 				if not humanoid then return end
+
+				-- 一旦今着ているアバターアイテムをすべて脱がせる
+				humanoid:RemoveAccessories()
+				for _, child in ipairs(character:GetChildren()) do
+					if child:IsA("Shirt") or child:IsA("Pants") or child:IsA("ShirtGraphic") or child:IsA("CharacterMesh") then
+						child:Destroy()
+					end
+				end
+
 				local success, err = pcall(function()
 					humanoid:ApplyDescription(desc)
 				end)
@@ -665,14 +665,14 @@ function BattleManager.Start()
 	task.wait(1) -- 外見適用の完了を待つ
 
 	-- 6. 全員フリーズしてカウントダウン
-	FreezeParticipants()
+	--FreezeParticipants()
 	currentBattleStatus = BattleStatus.Countdown
 	FireCountDownEvent()
 	task.wait(4) -- 3, 2, 1, GO
 
 	-- 7. バトルスタート
-	UnfreezeParticipants(battleParticipants.players)
-	UnfreezeParticipants(battleParticipants.npcs)
+	--UnfreezeParticipants(battleParticipants.players)
+	--UnfreezeParticipants(battleParticipants.npcs)
 	TrickHandler.StartBattle(BattleManager.OnHit, BattleManager.IsSameTeam)
 	FireBattleStatus(true)
 	currentBattleStatus = BattleStatus.Active
@@ -723,6 +723,9 @@ function BattleManager.Stop()
 
 	FreezeParticipants()
 
+	-- 参加者の見た目をバトル前の状態に戻す
+	RestoreParticipantDescriptions()
+
 	local topRanking = UpdateRanking()
 
 	-- チーム勝敗判定
@@ -739,9 +742,6 @@ function BattleManager.Stop()
 	FireBattleStatus(false)
 	UnfreezeParticipants(battleParticipants.players)
 	TeleportToLobby()
-
-	-- 参加者の見た目をバトル前の状態に戻す
-	RestoreParticipantDescriptions()
 
 	-- 状態リセット
 	NpcManager.StopBattle()
