@@ -31,8 +31,9 @@ type MannequinRig = Model & {
 }
 
 local function setupMannequinAsync(mannequin: Instance)
-	local base = mannequin:FindFirstChild("Base")
-	assert(base and base:IsA("BasePart"), `{mannequin:GetFullName()} is missing a Base`)
+	print("setupMannequinAsync " .. mannequin.Name)
+	--local base = mannequin:FindFirstChild("Base")
+	--assert(base and base:IsA("BasePart"), `{mannequin:GetFullName()} is missing a Base`)
 
 	-- Get the list of accessories, bundles, and skin color to apply to the mannequin
 	local accessoryIdsString = mannequin:GetAttribute(Constants.ACCESSORY_IDS_ATTRIBUTE)
@@ -63,7 +64,7 @@ local function setupMannequinAsync(mannequin: Instance)
 	end
 
 	-- Disable name/health display for the rig and anchor its root part so it doesn't move around
-	rig.Name = "Rig"
+	rig.Name = mannequin.Name
 	rig.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	rig.Humanoid.BodyTypeScale.Value = mannequin:GetAttribute(Constants.BODY_TYPE_SCALE_ATTRIBUTE) or 1
 	rig.Humanoid.BodyDepthScale.Value = mannequin:GetAttribute(Constants.BODY_DEPTH_SCALE_ATTRIBUTE) or 1
@@ -72,11 +73,14 @@ local function setupMannequinAsync(mannequin: Instance)
 	rig.Humanoid.BodyProportionScale.Value = mannequin:GetAttribute(Constants.BODY_PROPORTION_SCALE_ATTRIBUTE) or 1
 	rig.Humanoid.HeadScale.Value = mannequin:GetAttribute(Constants.HEAD_SCALE_ATTRIBUTE) or 1
 	rig.HumanoidRootPart.Anchored = true
-	rig.Parent = mannequin
+	rig.Parent = mannequin.Parent.Parent
+	
+	local anim = mannequin.Parent.Animate:Clone()
+	anim.Parent = rig
 
 	-- Calculate the hip height and move the rig into place
 	local height = rig.Humanoid.HipHeight + rig.HumanoidRootPart.Size.Y * 0.5
-	rig:PivotTo(base.CFrame * CFrame.new(0, height, 0))
+	rig:PivotTo(mannequin:GetPivot())
 
 	-- Play the pose animation if one is set
 	local poseAnimationId = mannequin:GetAttribute(Constants.POSE_ANIMATION_ATTRIBUTE)
@@ -102,7 +106,7 @@ local function initialize()
 
 	for _, mannequin in CollectionService:GetTagged(Constants.MANNEQUIN_TAG) do
 		setupMannequinAsync(mannequin)
-		task.wait(1)
+		task.wait(0.5)
 	end
 end
 
