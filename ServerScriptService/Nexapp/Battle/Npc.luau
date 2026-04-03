@@ -96,6 +96,11 @@ local function FindTarget(self)
 		local targetHrp = target:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not targetHrp then continue end
 
+		-- 同チームはターゲットにしない
+		local myTeam     = BattleManager.GetParticipantTeam(self.model.Name)
+		local targetTeam = BattleManager.GetParticipantTeam(target.Name)
+		if myTeam and targetTeam and myTeam == targetTeam then continue end
+
 		local dist = (targetHrp.Position - myPos).Magnitude
 		if dist < minDist then
 			-- Visibility Check

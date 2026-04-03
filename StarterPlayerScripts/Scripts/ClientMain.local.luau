@@ -18,6 +18,9 @@ LocalPlayer_:Start()
 local UIManager_ = require(ReplicatedFirst.Nexsys.Client.UIManager_)
 UIManager_.Setup()
 
+local TeamSelectionGui_ = require(ReplicatedFirst.Nexapp.Client.UI.TeamSelectionGui_)
+TeamSelectionGui_.Setup()
+
 ----------------------------------------------------------------------------------------------------
 -- ローディング画面終了後処理
 SystemDataModule_.WaitUntilLoadingScreenEnded()

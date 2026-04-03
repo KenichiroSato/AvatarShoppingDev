@@ -18,7 +18,7 @@ Define.PopUpType = {
 Define.LOGIN_BONUS_MAX_DAY = 30
 Define.LOGIN_BONUS_INTERVAL_TIME = 60 * 60 * 24
 
-Define.PODIUM_CUTSCENE_TIME = 10
+Define.PODIUM_CUTSCENE_TIME = 3
 Define.TIME_UP_DISPLAY_TIME = 3
 
 return Define

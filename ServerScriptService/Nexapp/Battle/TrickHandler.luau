@@ -15,6 +15,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 
 local onHitCallback: ((string, string) -> ())? = nil
+local isSameTeamCallback: ((string, string) -> boolean)? = nil
 local isBattleActive = false
 
 -- プレイヤーの状態を記録
@@ -265,6 +266,11 @@ local function fireProjectile(character: Model,targetPosition: Vector3, wand: To
 	ShowBeam(projectile, origin, targetVisualPos)
 	if result then		
 		local function applyTrick(characterModel: Model)
+			-- 同チームへのヒットは無効
+			if isSameTeamCallback and isSameTeamCallback(shooterName, characterModel.Name) then
+				print("[TrickHandler] Same team hit ignored: " .. shooterName .. " → " .. characterModel.Name)
+				return
+			end
 			applyTrickEffect(characterModel, trickName)
 			-- コールバック関数でヒット情報を通知
 			if onHitCallback then
@@ -298,14 +304,16 @@ local function fireProjectile(character: Model,targetPosition: Vector3, wand: To
 end
 
 
-function TrickHandler.StartBattle(hitCallback: (string, string) -> ())
+function TrickHandler.StartBattle(hitCallback: (string, string) -> (), sameTeamCallback: ((string, string) -> boolean)?)
 	isBattleActive = true
 	onHitCallback = hitCallback
+	isSameTeamCallback = sameTeamCallback
 end
 
 function TrickHandler.FinishBattle()
 	isBattleActive = false
 	onHitCallback = nil
+	isSameTeamCallback = nil
 end
 
 fireTrickEvent.OnServerEvent:Connect(function(player: Player,targetPosition: Vector3, wand: Tool)
