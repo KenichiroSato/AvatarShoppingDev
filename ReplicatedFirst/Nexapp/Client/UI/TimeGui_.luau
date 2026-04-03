@@ -43,7 +43,7 @@ local function Init(self, gui : ScreenGui)
 		if joinEvent and joinEvent:IsA("RemoteEvent") then
 			joinEvent:FireServer()
 			hasJoined = true
-			joinButton.Text = "参加済み！"
+			joinButton.Text = "Joined!"
 		end
 	end)
 
@@ -52,17 +52,23 @@ local function Init(self, gui : ScreenGui)
 			textLabel.Text = ""
 			joinButton.Visible = false
 		elseif state == "Break" then
-			textLabel.Text = string.format("break (%d)", seconds)
+			textLabel.Text = string.format("Next match in %d", seconds)
+			textLabel.Visible = true
 			joinButton.Visible = true
 			-- Break開始時にボタンをリセット
 			if seconds == 20 then
 				hasJoined = false
-				joinButton.Text = "参加する"
+				joinButton.Text = "Join"
 			end
 		else
-			local m = math.floor(seconds / 60)
-			local s = seconds % 60
-			textLabel.Text = string.format("%02d:%02d", m, s)
+			if hasJoined then
+				local m = math.floor(seconds / 60)
+				local s = seconds % 60
+				textLabel.Text = string.format("%02d:%02d", m, s)
+				textLabel.Visible = true
+			else
+				textLabel.Visible = false
+			end
 			joinButton.Visible = false
 		end
 	end)

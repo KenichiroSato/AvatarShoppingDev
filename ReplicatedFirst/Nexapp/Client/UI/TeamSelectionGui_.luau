@@ -108,7 +108,7 @@ local function CreateGUI(blueAvatar: Model, redAvatar: Model)
 	title.Size = UDim2.new(1, 0, 0, 80)
 	title.Position = UDim2.new(0, 0, 0, 50)
 	title.BackgroundTransparency = 1
-	title.Text = "どちらのリーダーのチームに入る？"
+	title.Text = "Which avatar's team will you join?"
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	title.TextStrokeTransparency = 0
 	title.TextScaled = true
@@ -165,7 +165,7 @@ local function CreateGUI(blueAvatar: Model, redAvatar: Model)
 		btn.AnchorPoint = Vector2.new(0.5, 0.5)
 		btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 		btn.TextColor3 = color
-		btn.Text = "このチームを選択"
+		btn.Text = "Join"
 		btn.Font = Enum.Font.FredokaOne
 		btn.TextScaled = true
 		btn.Active = true
