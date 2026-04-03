@@ -17,8 +17,8 @@ local battleParticipants = { npcs = {}, players = {} }
 local hitCounts = {}
 
 local teams = {
-	blue = { avatar = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
-	red  = { avatar = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
+	blue = { avatar = nil :: Model?, avatarCache = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
+	red  = { avatar = nil :: Model?, avatarCache = nil :: Model?, members = {} :: { Model }, hitCount = 0 },
 }
 local participantTeam: { [string]: string } = {}  -- [characterName] = "blue" | "red"
 local originalDescriptions: { [string]: HumanoidDescription } = {}  -- バトル前の外見を保存
@@ -323,8 +323,8 @@ local function UpdateRanking()
 	local teamScores = {
 		blue       = teams.blue.hitCount,
 		red        = teams.red.hitCount,
-		blueAvatar = teams.blue.avatar,
-		redAvatar  = teams.red.avatar,
+		blueAvatar = teams.blue.avatarCache,
+		redAvatar  = teams.red.avatarCache,
 	}
 	FireParticipants(GetRemoteEvent("RankingUpdate"), topRanking, teamScores)
 	return topRanking
@@ -390,7 +390,7 @@ local function RunTeamSelectionPhase(participants: { Model })
 
 	-- クライアントへUI表示を要求
 	local showTeamSelectionEvent = GetRemoteEvent("ShowTeamSelectionEvent")
-	FireParticipants(showTeamSelectionEvent, teams.blue.avatar, teams.red.avatar)
+	FireParticipants(showTeamSelectionEvent, teams.blue.avatarCache, teams.red.avatarCache)
 
 	-- クライアントからの選択受付イベント
 	local teamSelectedEvent = GetRemoteEvent("OnTeamSelectedEvent")
@@ -481,12 +481,46 @@ local function SelectTeamAvatars(allParticipants: { Model })
 	print("[TeamSelect] Blue avatar=" .. bName .. " / Red avatar=" .. rName)
 end
 
+local function CacheTeamAvatars()
+	local folder = game:GetService("ReplicatedStorage"):FindFirstChild("TeamAvatarsCache")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "TeamAvatarsCache"
+		folder.Parent = game:GetService("ReplicatedStorage")
+	end
+	folder:ClearAllChildren()
+
+	for _, teamName in ipairs({"blue", "red"}) do
+		local avatar = teams[teamName].avatar
+		if avatar then
+			local oldArch = avatar.Archivable
+			avatar.Archivable = true
+			local clone = avatar:Clone()
+			avatar.Archivable = oldArch
+			if clone then
+				-- スクリプト等を削除して軽量化
+				for _, desc in ipairs(clone:GetDescendants()) do
+					if desc:IsA("Script") or desc:IsA("LocalScript") then
+						desc.Disabled = true
+						desc:Destroy()
+					end
+				end
+				clone.Parent = folder
+				teams[teamName].avatarCache = clone
+			else
+				warn("[BattleManager] Failed to clone avatar for TeamAvatarsCache: " .. avatar.Name)
+			end
+		end
+	end
+end
+
 -- チーム選択フェーズ全体を実行する
 local function ExecuteTeamSelectionPhase()
 	local allParticipants = GetAllParticipants()
 
 	-- 1. チームアバター選出
 	SelectTeamAvatars(allParticipants)
+	CacheTeamAvatars()
 
 	-- 2. Fieldの両端を計算してアバターを配置
 	local blueCF, redCF = GetFieldEndCFrames()
@@ -680,8 +714,8 @@ function BattleManager.Start()
 	battleParticipants.players = {}
 	battleParticipants.npcs    = {}
 	hitCounts = {}
-	teams.blue = { avatar = nil, members = {}, hitCount = 0 }
-	teams.red  = { avatar = nil, members = {}, hitCount = 0 }
+	teams.blue = { avatar = nil, avatarCache = nil, members = {}, hitCount = 0 }
+	teams.red  = { avatar = nil, avatarCache = nil, members = {}, hitCount = 0 }
 	participantTeam = {}
 
 	-- 1. 「参加する」ボタンを押したプレイヤーのみ収集
@@ -805,8 +839,8 @@ function BattleManager.Stop()
 	battleParticipants.npcs    = {}
 	battleParticipants.players = {}
 	hitCounts = {}
-	teams.blue = { avatar = nil, members = {}, hitCount = 0 }
-	teams.red  = { avatar = nil, members = {}, hitCount = 0 }
+	teams.blue = { avatar = nil, avatarCache = nil, members = {}, hitCount = 0 }
+	teams.red  = { avatar = nil, avatarCache = nil, members = {}, hitCount = 0 }
 	participantTeam = {}
 	originalDescriptions = {}
 	UpdateBattleStatus(BattleStatus.Idle)
