@@ -88,8 +88,8 @@ local function FireFadeEvent(isOut: boolean, isWhite: boolean?)
 	FireParticipants(GetRemoteEvent("FadeEvent"), isOut, isWhite)
 end
 
-local function FireTimeUpEvent()
-	FireParticipants(GetRemoteEvent("TimeUpEvent"))
+local function FireTimeUpEvent(winner: string)
+	FireParticipants(GetRemoteEvent("TimeUpEvent"), winner)
 end
 
 local function FireCountDownEvent()
@@ -306,7 +306,13 @@ local function UpdateRanking()
 		table.insert(topRanking, rankingData[i])
 	end
 
-	FireParticipants(GetRemoteEvent("RankingUpdate"), topRanking)
+	local teamScores = {
+		blue       = teams.blue.hitCount,
+		red        = teams.red.hitCount,
+		blueAvatar = teams.blue.avatar,
+		redAvatar  = teams.red.avatar,
+	}
+	FireParticipants(GetRemoteEvent("RankingUpdate"), topRanking, teamScores)
 	return topRanking
 end
 
@@ -755,7 +761,15 @@ function BattleManager.Stop()
 	currentBattleStatus = BattleStatus.Ending
 	TrickHandler.FinishBattle()
 
-	FireTimeUpEvent()
+	-- チーム勝敗判定
+	local winner = if teams.blue.hitCount >= teams.red.hitCount then "blue" else "red"
+	print("[Result] " .. winner .. " wins! (blue=" .. teams.blue.hitCount .. " / red=" .. teams.red.hitCount .. ")")
+
+	FireTimeUpEvent(winner)  -- winnerを一緯に送信
+
+	-- 参加者の見た目をバトル前の状態に戻す
+	RestoreParticipantDescriptions()
+
 	task.wait(1)
 
 	FireFadeEvent(true, true)
@@ -763,14 +777,9 @@ function BattleManager.Stop()
 
 	FreezeParticipants()
 
-	-- 参加者の見た目をバトル前の状態に戻す
-	RestoreParticipantDescriptions()
 
 	local topRanking = UpdateRanking()
 
-	-- チーム勝敗判定
-	local winner = if teams.blue.hitCount >= teams.red.hitCount then "blue" else "red"
-	print("[Result] " .. winner .. " wins! (blue=" .. teams.blue.hitCount .. " / red=" .. teams.red.hitCount .. ")")
 	FireParticipants(GetRemoteEvent("TeamBattleResult"), winner, teams.blue.hitCount, teams.red.hitCount)
 
 	PodiumHandler.Display(topRanking, battleParticipants)

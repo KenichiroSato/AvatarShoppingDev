@@ -222,7 +222,7 @@ function UIManager_.StartScreenFadeOutSync(fadeTime, isWhite: boolean?)
 	if not fadeTime then
 		fadeTime = DEFAULT_FADE_TIME
 	end
-
+	isWhite = true
 	fadeGui.Frame.BackgroundTransparency = 1
 	fadeGui.Frame.BackgroundColor3 = isWhite and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)
 	UIManager_.FadeInGuiSync(fadeGui, fadeTime)
