@@ -24,6 +24,7 @@ function Npc.new(model: Model)
 	self.model = model
 	self.humanoid = model:WaitForChild("Humanoid") :: Humanoid
 	self.hrp = model:WaitForChild("HumanoidRootPart") :: BasePart
+	self.hrp.Anchored = false
 	self.wand = model:FindFirstChildWhichIsA("Tool") :: Tool?
 	self._running = false
 	self._task = nil
@@ -158,17 +159,18 @@ local function TryShoot(self)
 	local diff = math.max(0, averageScore - myScore)
 
 	-- Chance increases as diff increases (NPC is losing)
-	-- Base chance when diff is 0: 1/10 (10%)
-	-- Max chance when diff >= 9: 1/1 (100%)
-	local randMax = math.max(2, 20 - math.floor(diff*5))
+	-- Base chance when diff is 0: 1/40 (2.5%)
+	-- Max chance when diff >= 9: 1/6 (~17%)
+	local randMax = math.max(6, 40 - math.floor(diff*5))
 	local rand = math.random(1, randMax)
 	if rand == 1 then
-		local spread = 1 / (diff + 1)
+		-- spread が大きいほど外れる（精度低）
+		local spread = 3 / (diff + 1)
 		
 		local offset = Vector3.new(
+			(math.random() - 0.5) * spread * 10,
 			(math.random() - 0.5) * spread,
-			(math.random() - 0.5) * (spread / 2),
-			(math.random() - 0.5) * spread
+			(math.random() - 0.5) * spread * 10
 		)
 		
 		fireTrickFromNpcEvent:Fire(self.model, targetHrp.Position + offset, self.wand)

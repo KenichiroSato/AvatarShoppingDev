@@ -693,14 +693,11 @@ function BattleManager.Start()
 	task.wait(2)
 	TeleportParticipants()
 	task.wait(0.5)
-	FreezeParticipants()
 
 	-- 4. フェードイン
 	FireFadeEvent(false, true)
-	task.wait(1)
 
 	-- 5. チーム選択フェーズ（アンフリーズしてから実施）
-	UnfreezeParticipants(GetAllParticipants())
 	currentBattleStatus = BattleStatus.TeamSelection
 	ExecuteTeamSelectionPhase()
 
@@ -711,19 +708,16 @@ function BattleManager.Start()
 	task.wait(1) -- 外見適用の完了を待つ
 
 	-- 6. 全員フリーズしてカウントダウン
-	--FreezeParticipants()
 	currentBattleStatus = BattleStatus.Countdown
 	FireCountDownEvent()
 	task.wait(4) -- 3, 2, 1, GO
 
 	-- 7. バトルスタート
-	--UnfreezeParticipants(battleParticipants.players)
-	--UnfreezeParticipants(battleParticipants.npcs)
 	TrickHandler.StartBattle(BattleManager.OnHit, BattleManager.IsSameTeam)
 	FireBattleStatus(true)
 	currentBattleStatus = BattleStatus.Active
 
-	GrantBarrierToAllParticipants()
+	--GrantBarrierToAllParticipants()
 	WandAssigner.AssignRandomWands(battleParticipants.players)
 
 	print("Battle started! Blue=" .. #teams.blue.members .. " / Red=" .. #teams.red.members)
