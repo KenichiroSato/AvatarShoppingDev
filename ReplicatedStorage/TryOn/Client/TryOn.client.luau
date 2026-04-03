@@ -57,14 +57,15 @@ local function initialize()
 	TryOn.itemAdded:Connect(onItemAdded)
 	TryOn.itemRemoved:Connect(onItemRemoved)
 
-	-- バトル参加中はリセットボタンと試着リストを非表示
-	local battleStatusEvent = ReplicatedStorage:WaitForChild("RemoteEvent"):WaitForChild("BattleStatus") :: RemoteEvent
-	battleStatusEvent.OnClientEvent:Connect(function(isActive: boolean)
+	-- 指定されたバトルフェーズ中はリセットボタンと試着リストを非表示
+	local battlePhaseEvent = ReplicatedStorage:WaitForChild("RemoteEvent"):WaitForChild("BattlePhaseUpdate") :: RemoteEvent
+	battlePhaseEvent.OnClientEvent:Connect(function(phase: string)
+		local hideUI = (phase == "Transitioning" or phase == "TeamSelection" or phase == "Countdown" or phase == "Active")
 		local resetGui = playerGui:FindFirstChild("ResetAvatarGui") :: ScreenGui?
 		if resetGui then
-			resetGui.Enabled = not isActive
+			resetGui.Enabled = not hideUI
 		end
-		tryOnFrame.Visible = not isActive
+		tryOnFrame.Visible = not hideUI
 	end)
 
 	for _, item in TryOn.getItems() do

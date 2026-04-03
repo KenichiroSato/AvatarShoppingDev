@@ -80,6 +80,20 @@ local function FireParticipants(event: RemoteEvent, ...)
 	end
 end
 
+local function FireBattlePhaseUpdate(targetPlayer: Player?)
+	local ev = GetRemoteEvent("BattlePhaseUpdate")
+	if targetPlayer then
+		ev:FireClient(targetPlayer, currentBattleStatus)
+	else
+		FireParticipants(ev, currentBattleStatus)
+	end
+end
+
+local function UpdateBattleStatus(newStatus: string)
+	currentBattleStatus = newStatus
+	FireBattlePhaseUpdate()
+end
+
 local function FireBattleStatus(isActive: boolean)
 	FireParticipants(GetRemoteEvent("BattleStatus"), isActive)
 end
@@ -653,7 +667,7 @@ end
 
 function BattleManager.Start()
 	print("BattleManager.Start")
-	currentBattleStatus = BattleStatus.Preparing
+	UpdateBattleStatus(BattleStatus.Preparing)
 	PodiumHandler.Reset()
 	SetupJoinEvent() -- 参加イベントリスナを一度だけ登録
 
@@ -688,7 +702,7 @@ function BattleManager.Start()
 	end
 
 	-- 3. フェードアウト & テレポート
-	currentBattleStatus = BattleStatus.Transitioning
+	UpdateBattleStatus(BattleStatus.Transitioning)
 	FireFadeEvent(true, true)
 	task.wait(2)
 	TeleportParticipants()
@@ -698,7 +712,7 @@ function BattleManager.Start()
 	FireFadeEvent(false, true)
 
 	-- 5. チーム選択フェーズ（アンフリーズしてから実施）
-	currentBattleStatus = BattleStatus.TeamSelection
+	UpdateBattleStatus(BattleStatus.TeamSelection)
 	ExecuteTeamSelectionPhase()
 
 	-- 5.5 チームメンバーの見た目をリーダーに統一
@@ -708,14 +722,14 @@ function BattleManager.Start()
 	task.wait(1) -- 外見適用の完了を待つ
 
 	-- 6. 全員フリーズしてカウントダウン
-	currentBattleStatus = BattleStatus.Countdown
+	UpdateBattleStatus(BattleStatus.Countdown)
 	FireCountDownEvent()
 	task.wait(4) -- 3, 2, 1, GO
 
 	-- 7. バトルスタート
 	TrickHandler.StartBattle(BattleManager.OnHit, BattleManager.IsSameTeam)
 	FireBattleStatus(true)
-	currentBattleStatus = BattleStatus.Active
+	UpdateBattleStatus(BattleStatus.Active)
 
 	--GrantBarrierToAllParticipants()
 	WandAssigner.AssignRandomWands(battleParticipants.players)
@@ -752,7 +766,7 @@ function BattleManager.OnHit(shooterCharacterName: string, targetCharacterName: 
 end
 
 function BattleManager.Stop()
-	currentBattleStatus = BattleStatus.Ending
+	UpdateBattleStatus(BattleStatus.Ending)
 	TrickHandler.FinishBattle()
 
 	-- チーム勝敗判定
@@ -795,7 +809,7 @@ function BattleManager.Stop()
 	teams.red  = { avatar = nil, members = {}, hitCount = 0 }
 	participantTeam = {}
 	originalDescriptions = {}
-	currentBattleStatus = BattleStatus.Idle
+	UpdateBattleStatus(BattleStatus.Idle)
 end
 
 -- ===================== 途中参加・退出の監視 =====================
@@ -822,6 +836,7 @@ local function OnPlayerAdded(player: Player)
 				table.insert(battleParticipants.players, character)
 				hitCounts[player.Name] = 0
 				task.wait(0.5)
+				FireBattlePhaseUpdate(player)
 
 				if currentBattleStatus == BattleStatus.Preparing then
 					print("Joined during Preparing – added to list")
