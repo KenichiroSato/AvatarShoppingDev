@@ -57,16 +57,17 @@ local function SetupViewport(viewportFrame: ViewportFrame, characterModel: Model
 
 	-- バウンディングボックス(巨大なアクセサリーや見えないパーツ)に影響されないよう、
 	-- 安定した固定のオフセットに頼るか、HumanoidRootPartのY位置を基準にします。
-	local targetPos = Vector3.new(0, 1.5, 0) -- デフォルトの注視点(胸〜顔)
+	local targetPos = Vector3.new(0, 1.2, 0) -- デフォルトの注視点(胸〜顔)
 	local hrp = clone:FindFirstChild("HumanoidRootPart")
 	if hrp and hrp:IsA("BasePart") then
-		targetPos = Vector3.new(0, hrp.Position.Y + 1.5, 0)
+		targetPos = Vector3.new(0, hrp.Position.Y + 1.2, 0)
 	end
 	
-	-- Robloxアバターをいい感じに収めるための安定した距離 (大きすぎるエフェクトに引っ張られないよう固定上限つき)
+	-- Robloxアバターをいい感じに収めるための安定した距離
+	-- 異常に巨大な見えないパーツ(アクセサリー等)が含まれている場合に備えて、距離の上限を15スタッドに制限する
 	local distance = 6.5
 	if size.Y > 10 then
-		distance = size.Y * 1.2
+		distance = math.min(12, size.Y * 1.2)
 	end
 
 	-- 回転をリセットしたRobloxのキャラクターは通常 -Z 方向を向いている。
