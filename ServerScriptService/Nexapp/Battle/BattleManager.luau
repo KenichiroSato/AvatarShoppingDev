@@ -8,7 +8,8 @@ local Define = require(game:GetService("ReplicatedFirst").Nexapp.Common.Define)
 local BattleManager = {}
 
 -- ===================== 定数 =====================
-local MAX_PARTICIPANTS       = 8
+local MIN_PARTICIPANTS       = 8
+local MIN_NPCS               = 2
 local DEFAULT_WALK_SPEED     = 16
 local TEAM_SELECTION_TIMEOUT = 10   -- チーム選択タイムアウト (秒)
 
@@ -376,11 +377,32 @@ local function RunTeamSelectionPhase(participants: { Model })
 	local totalParticipants = #participants
 	local teamMemberIndex = { blue = 0, red = 0 }
 
-	-- NPCはこれまで通り自動ランダム選択で即時割り当て
+	-- NPCはこれまで通り自動ランダム選択で即時割り当て (ただし必ず両チームに1人はNPCを配置)
+	local npcs = {}
 	for _, character in ipairs(participants) do
 		if not IsPlayerCharacter(character) then
-			local rng = Random.new()
-			local chosenTeam = if rng:NextInteger(1, 2) == 1 then "blue" else "red"
+			table.insert(npcs, character)
+		end
+	end
+	
+	if #npcs > 0 then
+		local rng = Random.new()
+		-- シャッフル
+		for i = #npcs, 2, -1 do
+			local j = rng:NextInteger(1, i)
+			npcs[i], npcs[j] = npcs[j], npcs[i]
+		end
+		
+		for i, character in ipairs(npcs) do
+			local chosenTeam = "blue"
+			if i == 1 then
+				chosenTeam = "blue"
+			elseif i == 2 then
+				chosenTeam = "red"
+			else
+				chosenTeam = if rng:NextInteger(1, 2) == 1 then "blue" else "red"
+			end
+			
 			assigned[character] = true
 			selectedCount += 1
 			AssignToTeam(character, chosenTeam)
@@ -727,8 +749,8 @@ function BattleManager.Start()
 	end
 	joinedPlayers = {} -- 次のバトルに向けてリセット
 
-	-- 2. NPC補充 (MAX_PARTICIPANTS に満たない分)
-	local npcNum = math.max(0, MAX_PARTICIPANTS - #battleParticipants.players)
+	-- 2. NPC補充 (最低MIN_PARTICIPANTS人、かつ最低MIN_NPCS人確保)
+	local npcNum = math.max(MIN_NPCS, MIN_PARTICIPANTS - #battleParticipants.players)
 	local npcClones = NpcManager.StartBattle(npcNum)
 	battleParticipants.npcs = npcClones
 	for _, npc in ipairs(npcClones) do
