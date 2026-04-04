@@ -309,7 +309,8 @@ local function UpdateRanking()
 			isNpc = false
 			userId = player.UserId
 		end
-		table.insert(rankingData, { Name = name, Score = count, IsNpc = isNpc, UserId = userId })
+		local teamName = participantTeam[name]
+		table.insert(rankingData, { Name = name, Score = count, IsNpc = isNpc, UserId = userId, Team = teamName })
 	end
 
 	table.sort(rankingData, function(a, b) return a.Score > b.Score end)
