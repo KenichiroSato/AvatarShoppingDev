@@ -203,6 +203,20 @@ function ShopTeleporter_:Init(ins : Folder)
 
 	-- Teleport on click (GUIボタン経由)
 	itemButton.Activated:Connect(doTeleport)
+
+	-- バトル参加の状況に応じて非表示にする
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local remoteEventFolder = ReplicatedStorage:WaitForChild("RemoteEvent")
+	local updateEvent = remoteEventFolder:WaitForChild("BattlePhaseUpdate")
+	if updateEvent and updateEvent:IsA("RemoteEvent") then
+		updateEvent.OnClientEvent:Connect(function(phase)
+			if phase == "Transitioning" or phase == "TeamSelection" or phase == "Countdown" or phase == "Active" then
+				billboardGui.Enabled = false
+			elseif phase == "Preparing" or phase == "Idle" or phase == "Ending" then
+				billboardGui.Enabled = true
+			end
+		end)
+	end
 end
 
 ----------------------------------------------------------------------------------------------------
