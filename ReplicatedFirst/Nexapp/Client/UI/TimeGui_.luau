@@ -3,6 +3,7 @@
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BaseGui_ = require(ReplicatedFirst.Nexsys.Client.BaseGui_)
+local Define = require(ReplicatedFirst.Nexapp.Common.Define)
 
 --- @class ShopGui_ : BaseGui_
 local TimeGui_ = {}
@@ -56,7 +57,7 @@ local function Init(self, gui : ScreenGui)
 			textLabel.Visible = true
 			joinButton.Visible = true
 			-- Break開始時にボタンをリセット
-			if seconds == 20 then
+			if seconds == Define.INTERVAL_DURATION then
 				hasJoined = false
 				joinButton.Text = "Join"
 			end

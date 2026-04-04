@@ -121,7 +121,7 @@ local function applyTrickEffect(character: Model, trickName: string)
 	end
 	
 	setCharacterState(character.Name,currentTime, track)
-	task.delay(10, function()
+	task.delay(6, function()
 		if getCharacterStateTime(character.Name) == currentTime then--最後にかけられた魔法から5秒後に終了
 			track:Stop()
 			track:Destroy()

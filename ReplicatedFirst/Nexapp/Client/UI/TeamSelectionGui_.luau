@@ -83,7 +83,7 @@ end
 --========================
 -- Private Method: GUI構築
 --========================
-local function CreateGUI(blueAvatar: Model, redAvatar: Model)
+local function CreateGUI(blueAvatar: Model, redAvatar: Model, timeout: number)
 	if screenGui then
 		screenGui:Destroy()
 	end
@@ -119,6 +119,23 @@ local function CreateGUI(blueAvatar: Model, redAvatar: Model)
 	local uiTextSize = Instance.new("UITextSizeConstraint")
 	uiTextSize.MaxTextSize = 60
 	uiTextSize.Parent = title
+
+	-- カウントダウン
+	local countdownLabel = Instance.new("TextLabel")
+	countdownLabel.Size = UDim2.new(1, 0, 0, 80)
+	countdownLabel.Position = UDim2.new(0, 0, 0, 130)
+	countdownLabel.BackgroundTransparency = 1
+	countdownLabel.Text = tostring(timeout or 15)
+	countdownLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+	countdownLabel.TextStrokeTransparency = 0
+	countdownLabel.TextScaled = true
+	countdownLabel.Font = Enum.Font.FredokaOne
+	countdownLabel.ZIndex = 110
+	countdownLabel.Parent = mainFrame
+	
+	local countdownTextSize = Instance.new("UITextSizeConstraint")
+	countdownTextSize.MaxTextSize = 30
+	countdownTextSize.Parent = countdownLabel
 
 	local function CreateTeamPanel(teamName: string, color: Color3, posScaleX: number, avatarModel: Model)
 		local panel = Instance.new("Frame")
@@ -221,6 +238,17 @@ local function CreateGUI(blueAvatar: Model, redAvatar: Model)
 	task.delay(0.1, function()
 		TweenService:Create(uisRed, twInfo, {Scale = 1}):Play()
 	end)
+
+	if timeout and timeout > 0 then
+		task.spawn(function()
+			local t = timeout
+			while t > 0 and screenGui == targetScreenGui do
+				countdownLabel.Text = tostring(t)
+				task.wait(1)
+				t -= 1
+			end
+		end)
+	end
 end
 
 --========================
@@ -231,9 +259,9 @@ function TeamSelectionGui_.Setup()
 
 	local showEvent = remoteEventFolder:WaitForChild("ShowTeamSelectionEvent", 10)
 	if showEvent and showEvent:IsA("RemoteEvent") then
-		_connectionShow = showEvent.OnClientEvent:Connect(function(blueAvatar, redAvatar)
+		_connectionShow = showEvent.OnClientEvent:Connect(function(blueAvatar, redAvatar, timeout)
 			print("TeamSelectionGui: Received ShowTeamSelectionEvent")
-			CreateGUI(blueAvatar, redAvatar)
+			CreateGUI(blueAvatar, redAvatar, timeout)
 		end)
 	end
 	

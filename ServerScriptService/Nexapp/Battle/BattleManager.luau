@@ -10,7 +10,7 @@ local BattleManager = {}
 -- ===================== 定数 =====================
 local MAX_PARTICIPANTS       = 8
 local DEFAULT_WALK_SPEED     = 16
-local TEAM_SELECTION_TIMEOUT = 15   -- チーム選択タイムアウト (秒)
+local TEAM_SELECTION_TIMEOUT = 10   -- チーム選択タイムアウト (秒)
 
 -- ===================== 状態変数 =====================
 local battleParticipants = { npcs = {}, players = {} }
@@ -33,7 +33,6 @@ local BattleStatus = {
 	Ending        = "Ending",
 }
 local currentBattleStatus = BattleStatus.Idle
-local playerAddedConnection: RBXScriptConnection?
 local playerRemovingConnection: RBXScriptConnection?
 local joinedPlayers: { [Player]: boolean } = {}  -- 「参加する」ボタンを押したプレイヤーのセット
 
@@ -195,7 +194,7 @@ local function StunCharacter(targetCharacterName: string, stunDuration: number)
 		if humanoid then
 			humanoid.WalkSpeed = 0
 			targetCharacter:SetAttribute("IsStunned", true)
-			task.spawn(BarrierCharacter, targetCharacter, stunDuration + 5)
+			task.spawn(BarrierCharacter, targetCharacter, stunDuration + 3)
 			task.wait(stunDuration)
 			humanoid.WalkSpeed = DEFAULT_WALK_SPEED
 			targetCharacter:SetAttribute("IsStunned", nil)
@@ -390,7 +389,7 @@ local function RunTeamSelectionPhase(participants: { Model })
 
 	-- クライアントへUI表示を要求
 	local showTeamSelectionEvent = GetRemoteEvent("ShowTeamSelectionEvent")
-	FireParticipants(showTeamSelectionEvent, teams.blue.avatarCache, teams.red.avatarCache)
+	FireParticipants(showTeamSelectionEvent, teams.blue.avatarCache, teams.red.avatarCache, TEAM_SELECTION_TIMEOUT)
 
 	-- クライアントからの選択受付イベント
 	local teamSelectedEvent = GetRemoteEvent("OnTeamSelectedEvent")
@@ -796,7 +795,7 @@ function BattleManager.OnHit(shooterCharacterName: string, targetCharacterName: 
 		.. ", blue=" .. teams.blue.hitCount .. ", red=" .. teams.red.hitCount .. ")")
 
 	UpdateRanking()
-	task.spawn(StunCharacter, targetCharacterName, 10)
+	task.spawn(StunCharacter, targetCharacterName, 6)
 end
 
 function BattleManager.Stop()
@@ -846,61 +845,6 @@ function BattleManager.Stop()
 	UpdateBattleStatus(BattleStatus.Idle)
 end
 
--- ===================== 途中参加・退出の監視 =====================
-local function OnPlayerAdded(player: Player)
-	print("BattleManager: Player joined: " .. player.Name .. ", status=" .. currentBattleStatus)
-
-	player.CharacterAdded:Connect(function(character)
-		if currentBattleStatus == BattleStatus.Idle or currentBattleStatus == BattleStatus.Ending then return end
-
-		-- 既に参加済みかチェック
-		for _, p in ipairs(battleParticipants.players) do
-			if p == character then return end
-		end
-
-		-- NPCと交代
-		if #battleParticipants.npcs > 0 then
-			local npcToRemove = table.remove(battleParticipants.npcs, 1)
-			if npcToRemove then
-				print("Swapping NPC " .. npcToRemove.Name .. " for Player " .. player.Name)
-				hitCounts[npcToRemove.Name] = nil
-				RemoveFromTeam(npcToRemove)
-				npcToRemove:Destroy()
-
-				table.insert(battleParticipants.players, character)
-				hitCounts[player.Name] = 0
-				task.wait(0.5)
-				FireBattlePhaseUpdate(player)
-
-				if currentBattleStatus == BattleStatus.Preparing then
-					print("Joined during Preparing – added to list")
-
-				elseif currentBattleStatus == BattleStatus.Transitioning
-					or currentBattleStatus == BattleStatus.Countdown then
-					TeleportPlayerToRandomSpawn(player)
-					FreezeParticipants({ character })
-
-				elseif currentBattleStatus == BattleStatus.TeamSelection then
-					TeleportPlayerToRandomSpawn(player)
-					-- 人数が少ない方のチームに自動割り当て
-					local teamName = if #teams.blue.members <= #teams.red.members then "blue" else "red"
-					AssignToTeam(character, teamName)
-					print("Joined during TeamSelection – auto-assigned to " .. teamName)
-
-				elseif currentBattleStatus == BattleStatus.Active then
-					TeleportPlayerToRandomSpawn(player)
-					local teamName = if #teams.blue.members <= #teams.red.members then "blue" else "red"
-					AssignToTeam(character, teamName)
-					WandAssigner.AssignRandomWands({ character })
-					BarrierCharacter(character, 3)
-					GetRemoteEvent("TeleportEvent"):FireClient(player)
-					print("Joined during Active – team=" .. teamName)
-				end
-			end
-		end
-	end)
-end
-
 local function OnPlayerRemoving(player: Player)
 	for i, char in ipairs(battleParticipants.players) do
 		if char.Name == player.Name then
@@ -912,7 +856,6 @@ local function OnPlayerRemoving(player: Player)
 	end
 end
 
-playerAddedConnection   = Players.PlayerAdded:Connect(OnPlayerAdded)
 playerRemovingConnection = Players.PlayerRemoving:Connect(OnPlayerRemoving)
 
 -- モジュール読み込み時に即座実行し、BattleJoinEventを事前生成
