@@ -26,7 +26,9 @@ local CharacterImageSetter = require(ReplicatedFirst:WaitForChild("Nexapp"):Wait
 local function SetupViewport(viewportFrame: ViewportFrame, characterModel: Model)
 	-- 前回のコンテンツをクリア
 	for _, child in ipairs(viewportFrame:GetChildren()) do
-		if not child:IsA("Camera") then child:Destroy() end
+		if not child:IsA("Camera") and not child:IsA("UIAspectRatioConstraint") and not child:IsA("UICorner") and not child:IsA("UIStroke") then
+			child:Destroy()
+		end
 	end
 	local existingCam = viewportFrame:FindFirstChildOfClass("Camera")
 	if existingCam then existingCam:Destroy() end
@@ -130,6 +132,15 @@ local function Init(self, gui : ScreenGui)
 				end
 				
 				CharacterImageSetter.SetImageByInfo(data.Name, data.UserId, imageFrame)
+				
+				local uiStroke = imageFrame:FindFirstChildOfClass("UIStroke")
+				if uiStroke and data.Team then
+					if data.Team == "blue" then
+						uiStroke.Color = Color3.fromRGB(0, 120, 255)
+					elseif data.Team == "red" then
+						uiStroke.Color = Color3.fromRGB(255, 50, 50)
+					end
+				end
 			else
 				imageFrame.Visible = false
 			end
