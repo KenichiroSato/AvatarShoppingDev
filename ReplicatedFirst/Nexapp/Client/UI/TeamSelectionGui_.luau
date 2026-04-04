@@ -134,7 +134,7 @@ local function CreateGUI(blueAvatar: Model, redAvatar: Model, timeout: number)
 	countdownLabel.Parent = mainFrame
 	
 	local countdownTextSize = Instance.new("UITextSizeConstraint")
-	countdownTextSize.MaxTextSize = 30
+	countdownTextSize.MaxTextSize = 80
 	countdownTextSize.Parent = countdownLabel
 
 	local function CreateTeamPanel(teamName: string, color: Color3, posScaleX: number, avatarModel: Model)
