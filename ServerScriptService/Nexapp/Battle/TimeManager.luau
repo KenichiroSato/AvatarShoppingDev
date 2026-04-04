@@ -1,3 +1,6 @@
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local Define = require(ReplicatedFirst.Nexapp.Common.Define)
+
 local TimeManager = {}
 
 local function GetRemoteEvent()
@@ -28,7 +31,7 @@ function TimeManager.Start()
 	task.spawn(function()
 		while true do
 			-- 30 seconds count
-			for i = 20, 0, -1 do
+			for i = Define.INTERVAL_DURATION, 0, -1 do
 				remoteEvent:FireAllClients(i, "Break")
 				task.wait(1)
 			end
