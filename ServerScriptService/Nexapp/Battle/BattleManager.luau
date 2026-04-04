@@ -646,10 +646,10 @@ local function ApplyTeamAppearance()
 	end
 end
 
--- バトル開始前に全プレイヤー参加者の HumanoidDescription を保存する
+-- バトル開始前に全参加者の HumanoidDescription を保存する
 local function SaveParticipantDescriptions()
 	originalDescriptions = {}
-	for _, character in ipairs(battleParticipants.players) do
+	for _, character in ipairs(GetAllParticipants()) do
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
 		if not humanoid then continue end
 		local success, desc = pcall(function()
@@ -662,9 +662,10 @@ local function SaveParticipantDescriptions()
 	end
 end
 
--- バトル終了後に全プレイヤー参加者の外見を元に戻す
+-- バトル終了後に全参加者の外見を元に戻す
 local function RestoreParticipantDescriptions()
-	for _, character in ipairs(battleParticipants.players) do
+	local allParts = GetAllParticipants()
+	for _, character in ipairs(allParts) do
 		local savedDesc = originalDescriptions[character.Name]
 		if not savedDesc then continue end
 		task.spawn(function()
@@ -678,7 +679,7 @@ local function RestoreParticipantDescriptions()
 			end
 		end)
 	end
-	print("[Appearance] Restored original appearances for " .. #battleParticipants.players .. " players")
+	print("[Appearance] Restored original appearances for " .. #allParts .. " participants")
 end
 
 -- ===================== ルーレット表示（既存機能）=====================
