@@ -559,6 +559,19 @@ local function ExecuteTeamSelectionPhase()
 		teams.red.avatar:PivotTo(CFrame.lookAt(pos, Vector3.new(facingDir.X, pos.Y, facingDir.Z)))
 	end
 
+	-- 2.5. アバタールーレット演出（5秒）
+	-- 全参加者のデータをクライアントに送信し、ViewportFrameで流れるルーレットUIを表示する
+	local participantData = {}
+	for _, char in ipairs(allParticipants) do
+		local isNpc = not IsPlayerCharacter(char)
+		local userId = 0
+		local player = Players:FindFirstChild(char.Name)
+		if player then userId = player.UserId end
+		table.insert(participantData, { Name = char.Name, IsNpc = isNpc, UserId = userId })
+	end
+	FireParticipants(GetRemoteEvent("ShowAvatarRouletteEvent"), participantData)
+	task.wait(5) -- ルーレット演出の時間
+
 	-- 3. アバターを含めた全員が UI でチームを選択
 	RunTeamSelectionPhase(allParticipants)
 end
@@ -734,6 +747,7 @@ function BattleManager.Start()
 	GetRemoteEvent("ShowTeamSelectionEvent")
 	GetRemoteEvent("OnTeamSelectedEvent")
 	GetRemoteEvent("TeamSelectionEndEvent")
+	GetRemoteEvent("ShowAvatarRouletteEvent")
 
 	-- 状態リセット
 	battleParticipants.players = {}

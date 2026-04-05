@@ -14,6 +14,282 @@ TeamSelectionGui_.__index = TeamSelectionGui_
 local screenGui: ScreenGui? = nil
 local _connectionShow: RBXScriptConnection? = nil
 local _connectionEnd: RBXScriptConnection? = nil
+local _rouletteGui: ScreenGui? = nil
+local _connectionRoulette: RBXScriptConnection? = nil
+
+--========================
+-- Private: アバタールーレット演出
+--========================
+
+-- ReplicatedStorage の TeamAvatarsCache または Workspace からキャラクターモデルを探す
+local function FindCharacterModel(name: string): Model?
+	-- まず Workspace の生きているキャラクターから探す
+	local charInWorkspace = workspace:FindFirstChild(name)
+	if charInWorkspace and charInWorkspace:IsA("Model") then
+		return charInWorkspace :: Model
+	end
+	-- NPCはNpcFolder等に居る可能性
+	local npcFolder = workspace:FindFirstChild("NpcFolder") or workspace:FindFirstChild("NPCs")
+	if npcFolder then
+		local npc = npcFolder:FindFirstChild(name)
+		if npc and npc:IsA("Model") then
+			return npc :: Model
+		end
+	end
+	return nil
+end
+
+-- ViewportFrame にキャラクターモデルをクローンして上半身を映す
+local function SetupRouletteViewport(viewportFrame: ViewportFrame, characterModel: Model)
+	local worldModel = Instance.new("WorldModel")
+	worldModel.Parent = viewportFrame
+
+	local originalArchivable = characterModel.Archivable
+	characterModel.Archivable = true
+	local clone = characterModel:Clone()
+	characterModel.Archivable = originalArchivable
+
+	if not clone then return end
+
+	for _, desc in ipairs(clone:GetDescendants()) do
+		if desc:IsA("Script") or desc:IsA("LocalScript") or desc:IsA("ModuleScript") then
+			desc:Destroy()
+		elseif desc:IsA("LayerCollector") or desc:IsA("BillboardGui") or desc:IsA("SurfaceGui") then
+			desc:Destroy()
+		elseif desc:IsA("ParticleEmitter") or desc:IsA("Trail") or desc:IsA("Beam") then
+			desc:Destroy()
+		elseif desc:IsA("ClickDetector") or desc:IsA("ProximityPrompt") then
+			desc:Destroy()
+		end
+	end
+	clone:PivotTo(CFrame.new(0, 0, 0))
+	clone.Parent = worldModel
+
+	local camera = Instance.new("Camera")
+	local hrp = clone:FindFirstChild("HumanoidRootPart")
+	local targetY = 1.2
+	if hrp and hrp:IsA("BasePart") then
+		targetY = (hrp :: BasePart).Position.Y + 1.0
+	end
+	local targetPos = Vector3.new(0, targetY, 0)
+	-- +Z側からカメラを向けると正面が映る（Robloxキャラは-Z向き）
+	camera.CFrame = CFrame.lookAt(Vector3.new(0, targetY, -5.5), targetPos)
+	camera.FieldOfView = 55
+	viewportFrame.CurrentCamera = camera
+	camera.Parent = viewportFrame
+end
+
+-- アバタールーレット演出を表示する
+local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: boolean, UserId: number } })
+	-- 既存があれば破棄
+	if _rouletteGui then
+		_rouletteGui:Destroy()
+		_rouletteGui = nil
+	end
+
+	local CARD_WIDTH   = 200  -- カードの幅 (px)
+	local CARD_HEIGHT  = 240  -- カードの高さ (px)
+	local CARD_PADDING = 16   -- カード間のすき間 (px)
+	local CARD_STEP    = CARD_WIDTH + CARD_PADDING
+	local ROULETTE_DURATION = 5  -- 秒
+	local SLOW_START    = 3      -- 何秒後からスローダウンするか
+
+	-- 参加者リストを3周分繰り返して長い列を作る
+	local loopedData: { { Name: string, IsNpc: boolean, UserId: number } } = {}
+	local repeatCount = math.max(3, math.ceil(24 / math.max(1, #participantData)))
+	for _ = 1, repeatCount do
+		for _, d in ipairs(participantData) do
+			table.insert(loopedData, d)
+		end
+	end
+
+	local totalCards    = #loopedData
+	local totalWidth    = totalCards * CARD_STEP
+	local screenWidth   = workspace.CurrentCamera.ViewportSize.X
+	-- スクロール開始位置: 右端の外から始まる
+	local startOffsetX  = screenWidth
+	-- スクロール終了位置: リスト全体が画面左に流れきる手前で止める（中央付近で止まるように）
+	local endOffsetX    = -(totalWidth - screenWidth / 2 - CARD_STEP * 2)
+
+	-- ScreenGui
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "AvatarRouletteGui"
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.ResetOnSpawn = false
+	_rouletteGui = gui
+
+	-- 背景フレーム
+	local bg = Instance.new("Frame")
+	bg.Size = UDim2.new(1, 0, 1, 0)
+	bg.BackgroundColor3 = Color3.fromRGB(8, 8, 20)
+	bg.BackgroundTransparency = 0.15
+	bg.ZIndex = 200
+	bg.Parent = gui
+
+	-- キラキラグラデーション飾り（上部）
+	local topGlow = Instance.new("Frame")
+	topGlow.Size = UDim2.new(1, 0, 0, 6)
+	topGlow.Position = UDim2.new(0, 0, 0, 0)
+	topGlow.BackgroundColor3 = Color3.fromRGB(255, 220, 50)
+	topGlow.BorderSizePixel = 0
+	topGlow.ZIndex = 205
+	topGlow.Parent = bg
+
+	-- タイトルテキスト
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, 0, 0, 90)
+	title.Position = UDim2.new(0, 0, 0, 20)
+	title.BackgroundTransparency = 1
+	title.Text = "Selecting Team Avatar..."
+	title.TextColor3 = Color3.fromRGB(255, 230, 60)
+	title.TextStrokeColor3 = Color3.fromRGB(20, 10, 0)
+	title.TextStrokeTransparency = 0
+	title.Font = Enum.Font.FredokaOne
+	title.TextScaled = true
+	title.ZIndex = 210
+	title.Parent = bg
+	local titleSizeConstraint = Instance.new("UITextSizeConstraint")
+	titleSizeConstraint.MaxTextSize = 72
+	titleSizeConstraint.Parent = title
+
+	-- タイトルのパルスアニメ
+	local titleTween = TweenService:Create(title,
+		TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ TextTransparency = 0.25 }
+	)
+	titleTween:Play()
+
+	-- カードスクロール用コンテナ（ClipsDescendants でカードが端で消える）
+	local clipFrame = Instance.new("Frame")
+	clipFrame.Size = UDim2.new(1, 0, 0, CARD_HEIGHT + 40)
+	clipFrame.Position = UDim2.new(0, 0, 0.5, -(CARD_HEIGHT + 40) / 2)
+	clipFrame.BackgroundTransparency = 1
+	clipFrame.ClipsDescendants = true
+	clipFrame.ZIndex = 202
+	clipFrame.Parent = bg
+
+	-- スクロールする内部フレーム（全カードの親）
+	local scrollFrame = Instance.new("Frame")
+	scrollFrame.BackgroundTransparency = 1
+	scrollFrame.Size = UDim2.new(0, totalWidth, 1, 0)
+	scrollFrame.Position = UDim2.new(0, startOffsetX, 0, 0)
+	scrollFrame.ZIndex = 203
+	scrollFrame.Parent = clipFrame
+
+	-- 各カードを生成
+	for i, data in ipairs(loopedData) do
+		local cardX = (i - 1) * CARD_STEP
+		local card = Instance.new("Frame")
+		card.Size = UDim2.new(0, CARD_WIDTH, 0, CARD_HEIGHT)
+		card.Position = UDim2.new(0, cardX, 0.5, -CARD_HEIGHT / 2)
+		card.BackgroundColor3 = Color3.fromRGB(25, 25, 50)
+		card.BackgroundTransparency = 0.05
+		card.ZIndex = 204
+		local cardCorner = Instance.new("UICorner")
+		cardCorner.CornerRadius = UDim.new(0, 16)
+		cardCorner.Parent = card
+
+		-- カードのボーダーグロー
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(100, 100, 200)
+		stroke.Thickness = 2
+		stroke.Transparency = 0.4
+		stroke.Parent = card
+
+		-- ViewportFrame（上80%）
+		local viewport = Instance.new("ViewportFrame")
+		viewport.Size = UDim2.new(1, 0, 0, CARD_HEIGHT - 50)
+		viewport.Position = UDim2.new(0, 0, 0, 0)
+		viewport.BackgroundTransparency = 1
+		viewport.ZIndex = 205
+
+		local characterModel = FindCharacterModel(data.Name)
+		if characterModel then
+			SetupRouletteViewport(viewport, characterModel)
+		else
+			-- モデルが見つからない場合はシルエットアイコンを表示
+			local fallback = Instance.new("TextLabel")
+			fallback.Size = UDim2.new(1, 0, 1, 0)
+			fallback.BackgroundTransparency = 1
+			fallback.Text = "👤"
+			fallback.TextScaled = true
+			fallback.Font = Enum.Font.GothamBold
+			fallback.TextColor3 = Color3.fromRGB(150, 150, 200)
+			fallback.ZIndex = 206
+			fallback.Parent = viewport
+		end
+		viewport.Parent = card
+
+		-- 名前ラベル（下部）
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Size = UDim2.new(1, -8, 0, 40)
+		nameLabel.Position = UDim2.new(0, 4, 1, -44)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = data.Name
+		nameLabel.TextColor3 = Color3.fromRGB(240, 240, 255)
+		nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 30)
+		nameLabel.TextStrokeTransparency = 0.3
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.TextScaled = true
+		local nameConstraint = Instance.new("UITextSizeConstraint")
+		nameConstraint.MaxTextSize = 22
+		nameConstraint.Parent = nameLabel
+		nameLabel.ZIndex = 206
+		nameLabel.Parent = card
+
+		card.Parent = scrollFrame
+	end
+
+	-- GUI を PlayerGui に追加
+	local playerGui = Player:WaitForChild("PlayerGui")
+	gui.Parent = playerGui
+
+	-- 背景フェードイン
+	bg.BackgroundTransparency = 1
+	TweenService:Create(bg, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0.15
+	}):Play()
+
+	-- ===== スクロールアニメーション =====
+	-- フェーズ1: 最初SLOW_START秒は高速でスクロール
+	local phase1Distance = (endOffsetX - startOffsetX) * 0.5
+	local phase1Tween = TweenService:Create(scrollFrame,
+		TweenInfo.new(SLOW_START, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ Position = UDim2.new(0, startOffsetX + phase1Distance, 0, 0) }
+	)
+	-- フェーズ2: 残り(ROULETTE_DURATION - SLOW_START)秒でゆっくり止まる
+	local phase2Tween = TweenService:Create(scrollFrame,
+		TweenInfo.new(ROULETTE_DURATION - SLOW_START, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Position = UDim2.new(0, endOffsetX, 0, 0) }
+	)
+
+	phase1Tween:Play()
+	phase1Tween.Completed:Connect(function(state)
+		if state == Enum.PlaybackState.Completed then
+			phase2Tween:Play()
+		end
+	end)
+
+	-- 5秒後にフェードアウトして破棄
+	task.delay(ROULETTE_DURATION, function()
+		if not _rouletteGui then return end
+		local fadeOut = TweenService:Create(bg,
+			TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{ BackgroundTransparency = 1 }
+		)
+		-- title と cards も同時にフェード
+		TweenService:Create(title, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		TweenService:Create(clipFrame, TweenInfo.new(0.5), { GroupTransparency = 1 }):Play()
+		fadeOut:Play()
+		fadeOut.Completed:Connect(function()
+			if _rouletteGui then
+				_rouletteGui:Destroy()
+				_rouletteGui = nil
+			end
+		end)
+	end)
+end
 
 --========================
 -- Private Method: Camera & Viewport
@@ -262,6 +538,11 @@ function TeamSelectionGui_.Setup()
 	if showEvent and showEvent:IsA("RemoteEvent") then
 		_connectionShow = showEvent.OnClientEvent:Connect(function(blueAvatar, redAvatar, timeout)
 			print("TeamSelectionGui: Received ShowTeamSelectionEvent")
+			-- ルーレット演出が表示中なら即座に消す
+			if _rouletteGui then
+				_rouletteGui:Destroy()
+				_rouletteGui = nil
+			end
 			CreateGUI(blueAvatar, redAvatar, timeout)
 		end)
 	end
@@ -273,6 +554,15 @@ function TeamSelectionGui_.Setup()
 				screenGui:Destroy()
 				screenGui = nil
 			end
+		end)
+	end
+
+	-- アバタールーレット演出イベント
+	local rouletteEvent = remoteEventFolder:WaitForChild("ShowAvatarRouletteEvent", 10)
+	if rouletteEvent and rouletteEvent:IsA("RemoteEvent") then
+		_connectionRoulette = rouletteEvent.OnClientEvent:Connect(function(participantData)
+			print("TeamSelectionGui: Received ShowAvatarRouletteEvent, participants=", #participantData)
+			ShowAvatarRoulette(participantData)
 		end)
 	end
 end
