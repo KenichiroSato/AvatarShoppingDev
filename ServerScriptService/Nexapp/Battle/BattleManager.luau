@@ -259,9 +259,11 @@ local function TeleportParticipants()
 		spawnCFrames[i], spawnCFrames[j] = spawnCFrames[j], spawnCFrames[i]
 	end
 
+	local numSpawns = #spawnCFrames
 	for idx, model in ipairs(allParticipants) do
-		if model and spawnCFrames[idx] then
-			model:PivotTo(spawnCFrames[idx])
+		if model and numSpawns > 0 then
+			local spawnIndex = ((idx - 1) % numSpawns) + 1
+			model:PivotTo(spawnCFrames[spawnIndex])
 		end
 		local player = Players:GetPlayerFromCharacter(model)
 		if player then
