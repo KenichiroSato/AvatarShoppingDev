@@ -843,8 +843,15 @@ function BattleManager.Stop()
 	TrickHandler.FinishBattle()
 
 	-- チーム勝敗判定
-	local winner = if teams.blue.hitCount >= teams.red.hitCount then "blue" else "red"
-	print("[Result] " .. winner .. " wins! (blue=" .. teams.blue.hitCount .. " / red=" .. teams.red.hitCount .. ")")
+	local winner: string
+	if teams.blue.hitCount == teams.red.hitCount then
+		winner = "draw"
+	elseif teams.blue.hitCount > teams.red.hitCount then
+		winner = "blue"
+	else
+		winner = "red"
+	end
+	print("[Result] " .. winner .. " (blue=" .. teams.blue.hitCount .. " / red=" .. teams.red.hitCount .. ")")
 
 	FireTimeUpEvent(winner)  -- winnerを一緯に送信
 

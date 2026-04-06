@@ -32,13 +32,16 @@ local function Init(self, gui : ScreenGui)
 	local imageLabel = frame:WaitForChild("ImageLabel") :: ImageLabel
 	local blueLabel = frame:WaitForChild("BlueLabel") :: TextLabel
 	local redLabel  = frame:WaitForChild("RedLabel")  :: TextLabel
+	local drawLabel = frame:WaitForChild("DrawLabel") :: TextLabel
 	blueLabel.Visible = false
 	redLabel.Visible  = false
+	drawLabel.Visible = false
 
 	timeupEvent.OnClientEvent:Connect(function(winner: string)
 		-- 勝利チームのラベルだけ表示
 		blueLabel.Visible = (winner == "blue")
 		redLabel.Visible  = (winner == "red")
+		drawLabel.Visible = (winner == "draw")
 
 		self:Show()
 		self:PlaySEByName("EndGong")
@@ -49,6 +52,7 @@ local function Init(self, gui : ScreenGui)
 		-- 次のバトルに向けてリセット
 		blueLabel.Visible = false
 		redLabel.Visible  = false
+		drawLabel.Visible = false
 	end)
 end
 
