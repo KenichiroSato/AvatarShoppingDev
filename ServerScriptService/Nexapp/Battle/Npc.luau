@@ -161,7 +161,7 @@ local function TryShoot(self)
 	-- Chance increases as diff increases (NPC is losing)
 	-- Base chance when diff is 0: 1/40 (2.5%)
 	-- Max chance when diff >= 9: 1/6 (~17%)
-	local randMax = math.max(6, 40 - math.floor(diff*5))
+	local randMax = math.max(6, 30 - math.floor(diff*5))
 	local rand = math.random(1, randMax)
 	if rand == 1 then
 		-- spread が大きいほど外れる（精度低）
