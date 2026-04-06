@@ -65,7 +65,7 @@ local function setupMannequinAsync(mannequin: Instance)
 
 	-- Disable name/health display for the rig and anchor its root part so it doesn't move around
 	rig.Name = mannequin.Name
-	rig.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	rig.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
 	rig.Humanoid.BodyTypeScale.Value = mannequin:GetAttribute(Constants.BODY_TYPE_SCALE_ATTRIBUTE) or 1
 	rig.Humanoid.BodyDepthScale.Value = mannequin:GetAttribute(Constants.BODY_DEPTH_SCALE_ATTRIBUTE) or 1
 	rig.Humanoid.BodyHeightScale.Value = mannequin:GetAttribute(Constants.BODY_HEIGHT_SCALE_ATTRIBUTE) or 1
