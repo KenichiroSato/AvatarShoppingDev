@@ -69,7 +69,7 @@ local function SetupViewport(viewportFrame: ViewportFrame, characterModel: Model
 end
 
 -- ランキングスロットにViewportFrame or ImageLabelでキャラクターを表示
-local function SetupRankingSlot(imageFrame: ImageLabel, name: string, userId: number?)
+local function SetupRankingSlot(imageFrame: ImageLabel, name: string, userId: number?, originalDesc: HumanoidDescription?)
 	local Players = game:GetService("Players")
 	local Workspace = game:GetService("Workspace")
 
@@ -105,6 +105,22 @@ local function SetupRankingSlot(imageFrame: ImageLabel, name: string, userId: nu
 		vp.Visible = true
 		imageFrame.Image = ""
 		SetupViewport(vp, character)
+
+		-- プレイヤーかつ元の外見データがある場合、着替え前の外見をViewport内のクローンに適用する
+		if originalDesc and userId and userId > 0 then
+			task.spawn(function()
+				local worldModel = vp:FindFirstChildOfClass("WorldModel")
+				if not worldModel then return end
+				local cloneInWorld = worldModel:FindFirstChildOfClass("Model")
+				if not cloneInWorld then return end
+				local humanoid = cloneInWorld:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					pcall(function()
+						humanoid:ApplyDescription(originalDesc)
+					end)
+				end
+			end)
+		end
 	else
 		-- モデル未取得の場合はImageLabelにフォールバック
 		vp.Visible = false
@@ -175,7 +191,7 @@ local function Init(self, gui : ScreenGui)
 					rankText.Text = "#" .. i
 				end
 				
-				SetupRankingSlot(imageFrame, data.Name, data.UserId)
+				SetupRankingSlot(imageFrame, data.Name, data.UserId, data.OriginalDesc)
 				
 				local uiStroke = imageFrame:FindFirstChildOfClass("UIStroke")
 				if uiStroke and data.Team then
