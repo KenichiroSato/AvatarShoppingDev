@@ -39,7 +39,7 @@ function TimeManager.Start()
 			BattleManager.Start()
 			
 			-- 3 minutes count
-			for i = 120, 0, -1 do
+			for i = Define.BATTLE_DURATION, 0, -1 do
 				remoteEvent:FireAllClients(i, "Battle")
 				task.wait(1)
 			end
