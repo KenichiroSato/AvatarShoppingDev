@@ -68,6 +68,66 @@ local function SetupViewport(viewportFrame: ViewportFrame, characterModel: Model
 	camera.Parent = viewportFrame
 end
 
+-- ランキングスロットにViewportFrame or ImageLabelでキャラクターを表示
+local function SetupRankingSlot(imageFrame: ImageLabel, name: string, userId: number?, originalDesc: HumanoidDescription?)
+	local Players = game:GetService("Players")
+	local Workspace = game:GetService("Workspace")
+
+	-- キャラクターモデルを取得
+	local character: Model? = nil
+	if userId and userId > 0 then
+		-- オンラインプレイヤー
+		local player = Players:GetPlayerByUserId(userId)
+		if player then
+			character = player.Character
+		end
+	else
+		-- NPC: Workspace.NPCs フォルダから名前で探す
+		local npcFolder = Workspace:FindFirstChild("NPCs")
+		if npcFolder then
+			character = npcFolder:FindFirstChild(name) :: Model?
+		end
+	end
+
+	-- 既存のViewportFrameを再利用 or 新規作成
+	local vp = imageFrame:FindFirstChildOfClass("ViewportFrame")
+	if not vp then
+		vp = Instance.new("ViewportFrame") :: ViewportFrame
+		vp.Name = "RankingViewport"
+		vp.Size = UDim2.new(1, 0, 1, 0)
+		vp.Position = UDim2.new(0, 0, 0, 0)
+		vp.BackgroundTransparency = 1
+		vp.ZIndex = imageFrame.ZIndex + 1
+		vp.Parent = imageFrame
+	end
+
+	if character then
+		vp.Visible = true
+		imageFrame.Image = ""
+		SetupViewport(vp, character)
+
+		-- プレイヤーかつ元の外見データがある場合、着替え前の外見をViewport内のクローンに適用する
+		if originalDesc and userId and userId > 0 then
+			task.spawn(function()
+				local worldModel = vp:FindFirstChildOfClass("WorldModel")
+				if not worldModel then return end
+				local cloneInWorld = worldModel:FindFirstChildOfClass("Model")
+				if not cloneInWorld then return end
+				local humanoid = cloneInWorld:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					pcall(function()
+						humanoid:ApplyDescription(originalDesc)
+					end)
+				end
+			end)
+		end
+	else
+		-- モデル未取得の場合はImageLabelにフォールバック
+		vp.Visible = false
+		CharacterImageSetter.SetImageByInfo(name, userId, imageFrame)
+	end
+end
+
 --========================
 -- private method
 --========================
@@ -131,7 +191,7 @@ local function Init(self, gui : ScreenGui)
 					rankText.Text = "#" .. i
 				end
 				
-				CharacterImageSetter.SetImageByInfo(data.Name, data.UserId, imageFrame)
+				SetupRankingSlot(imageFrame, data.Name, data.UserId, data.OriginalDesc)
 				
 				local uiStroke = imageFrame:FindFirstChildOfClass("UIStroke")
 				if uiStroke and data.Team then
