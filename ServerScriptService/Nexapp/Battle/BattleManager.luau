@@ -151,6 +151,10 @@ local function GetParticipantTeam(name: string): string?
 	return participantTeam[name]
 end
 
+local function IsParticipant(name: string): boolean
+	return participantTeam[name] ~= nil
+end
+
 -- ===================== キャラクター操作 =====================
 local function BarrierCharacter(targetCharacter: Model, duration: number?): Model?
 	local ServerStorage = game:GetService("ServerStorage")
@@ -729,6 +733,10 @@ function BattleManager.GetParticipantTeam(name: string): string?
 	return GetParticipantTeam(name)
 end
 
+function BattleManager.IsParticipant(name: string): boolean
+	return IsParticipant(name)
+end
+
 function BattleManager.GetParticipants()
 	return battleParticipants
 end
@@ -800,7 +808,7 @@ function BattleManager.Start()
 	task.wait(4) -- 3, 2, 1, GO
 
 	-- 7. バトルスタート
-	TrickHandler.StartBattle(BattleManager.OnHit, BattleManager.IsSameTeam)
+	TrickHandler.StartBattle(BattleManager.OnHit, BattleManager.IsSameTeam, BattleManager.IsParticipant)
 	FireBattleStatus(true)
 	UpdateBattleStatus(BattleStatus.Active)
 

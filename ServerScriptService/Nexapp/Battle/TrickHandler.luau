@@ -16,6 +16,7 @@ local ReplicatedFirst = game:GetService("ReplicatedFirst")
 
 local onHitCallback: ((string, string) -> ())? = nil
 local isSameTeamCallback: ((string, string) -> boolean)? = nil
+local isParticipantCallback: ((string) -> boolean)? = nil
 local isBattleActive = false
 
 -- プレイヤーの状態を記録
@@ -266,6 +267,11 @@ local function fireProjectile(character: Model,targetPosition: Vector3, wand: To
 	ShowBeam(projectile, origin, targetVisualPos)
 	if result then		
 		local function applyTrick(characterModel: Model)
+			-- 参加者かどうかの確認
+			if isParticipantCallback and not isParticipantCallback(characterModel.Name) then
+				print("[TrickHandler] Non-participant hit ignored: " .. characterModel.Name)
+				return
+			end
 			-- 同チームへのヒットは無効
 			if isSameTeamCallback and isSameTeamCallback(shooterName, characterModel.Name) then
 				print("[TrickHandler] Same team hit ignored: " .. shooterName .. " → " .. characterModel.Name)
@@ -304,16 +310,18 @@ local function fireProjectile(character: Model,targetPosition: Vector3, wand: To
 end
 
 
-function TrickHandler.StartBattle(hitCallback: (string, string) -> (), sameTeamCallback: ((string, string) -> boolean)?)
+function TrickHandler.StartBattle(hitCallback: (string, string) -> (), sameTeamCallback: ((string, string) -> boolean)?, participantCallback: ((string) -> boolean)?)
 	isBattleActive = true
 	onHitCallback = hitCallback
 	isSameTeamCallback = sameTeamCallback
+	isParticipantCallback = participantCallback
 end
 
 function TrickHandler.FinishBattle()
 	isBattleActive = false
 	onHitCallback = nil
 	isSameTeamCallback = nil
+	isParticipantCallback = nil
 end
 
 fireTrickEvent.OnServerEvent:Connect(function(player: Player,targetPosition: Vector3, wand: Tool)
