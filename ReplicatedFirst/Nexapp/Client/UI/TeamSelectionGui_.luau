@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Player = Players.LocalPlayer
-
+local SoundManager_ = require(ReplicatedFirst.Nexsys.Client.SoundManager_)
 local UIManager_ = require(ReplicatedFirst.Nexsys.Client.UIManager_)
 
 local TeamSelectionGui_ = {}
@@ -92,7 +92,7 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 	local CARD_PADDING = 16   -- カード間のすき間 (px)
 	local CARD_STEP    = CARD_WIDTH + CARD_PADDING
 	local ROULETTE_DURATION = 5  -- 秒
-	local SLOW_START    = 3      -- 何秒後からスローダウンするか
+	local SLOW_START    = 3     -- 何秒後からスローダウンするか
 
 	-- 参加者リストを3周分繰り返して長い列を作る
 	local loopedData: { { Name: string, IsNpc: boolean, UserId: number } } = {}
@@ -109,7 +109,7 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 	-- スクロール開始位置: 右端の外から始まる
 	local startOffsetX  = screenWidth
 	-- スクロール終了位置: リスト全体が画面左に流れきる手前で止める（中央付近で止まるように）
-	local endOffsetX    = -(totalWidth - screenWidth / 2 - CARD_STEP * 2)
+	local endOffsetX    = -(totalWidth - screenWidth / 2 - CARD_STEP * 5)
 
 	-- ScreenGui
 	local gui = Instance.new("ScreenGui")
@@ -252,8 +252,10 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 	}):Play()
 
 	-- ===== スクロールアニメーション =====
+	SoundManager_.PlaySEByName("DrumRoll")
+
 	-- フェーズ1: 最初SLOW_START秒は高速でスクロール
-	local phase1Distance = (endOffsetX - startOffsetX) * 0.5
+	local phase1Distance = (endOffsetX - startOffsetX) * 0.7
 	local phase1Tween = TweenService:Create(scrollFrame,
 		TweenInfo.new(SLOW_START, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
 		{ Position = UDim2.new(0, startOffsetX + phase1Distance, 0, 0) }
@@ -284,6 +286,7 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 		fadeOut:Play()
 		fadeOut.Completed:Connect(function()
 			if _rouletteGui then
+				SoundManager_.StopSEByName("DrumRoll")
 				_rouletteGui:Destroy()
 				_rouletteGui = nil
 			end
@@ -543,6 +546,7 @@ function TeamSelectionGui_.Setup()
 				_rouletteGui:Destroy()
 				_rouletteGui = nil
 			end
+			SoundManager_.PlaySEByName("TaDa")
 			CreateGUI(blueAvatar, redAvatar, timeout)
 		end)
 	end

@@ -53,7 +53,7 @@ local function Init(self, gui : ScreenGui)
 			textLabel.Text = ""
 			joinButton.Visible = false
 		elseif state == "Break" then
-			textLabel.Text = string.format("Next match in %d", seconds)
+			textLabel.Text = string.format("Next magic battle in %d", seconds)
 			textLabel.Visible = true
 			joinButton.Visible = true
 			-- Break開始時にボタンをリセット
