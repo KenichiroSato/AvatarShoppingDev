@@ -388,7 +388,7 @@ local function CreateGUI(blueAvatar: Model, redAvatar: Model, timeout: number)
 	title.Size = UDim2.new(1, 0, 0, 80)
 	title.Position = UDim2.new(0, 0, 0, 50)
 	title.BackgroundTransparency = 1
-	title.Text = "Which avatar's team will you join?"
+	title.Text = "Which avatar is better?"
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	title.TextStrokeTransparency = 0
 	title.TextScaled = true
@@ -482,10 +482,14 @@ local function CreateGUI(blueAvatar: Model, redAvatar: Model, timeout: number)
 			if selectEvent and selectEvent:IsA("RemoteEvent") then
 				selectEvent:FireServer(teamName)
 				
-				-- 選択後、UIを非表示にする
-				if screenGui then
-					screenGui:Destroy()
-					screenGui = nil
+				-- 選択後、他のUI要素を隠して待機メッセージを表示
+				if mainFrame and title then
+					for _, child in ipairs(mainFrame:GetChildren()) do
+						if child:IsA("GuiObject") and child ~= title and child ~= countdownLabel then
+							child.Visible = false
+						end
+					end
+					title.Text = "Waiting for other players..."
 				end
 			end
 		end)

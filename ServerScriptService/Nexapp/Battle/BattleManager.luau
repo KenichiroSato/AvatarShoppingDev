@@ -11,7 +11,7 @@ local BattleManager = {}
 local MIN_PARTICIPANTS       = 8
 local MIN_NPCS               = 2
 local DEFAULT_WALK_SPEED     = 16
-local TEAM_SELECTION_TIMEOUT = 10   -- チーム選択タイムアウト (秒)
+local TEAM_SELECTION_TIMEOUT = 15   -- チーム選択タイムアウト (秒)
 
 -- ===================== 状態変数 =====================
 local battleParticipants = { npcs = {}, players = {} }
