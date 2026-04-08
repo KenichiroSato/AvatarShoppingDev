@@ -159,13 +159,18 @@ local function TryShoot(self)
 	local diff = math.max(0, averageScore - myScore)
 
 	-- Chance increases as diff increases (NPC is losing)
-	-- Base chance when diff is 0: 1/40 (2.5%)
-	-- Max chance when diff >= 9: 1/6 (~17%)
-	local randMax = math.max(6, 30 - math.floor(diff*5))
+	-- Base chance when diff is 0 depends on the NPC's randomized _fireRateBase
+	-- Max chance is 1/6 (~17%)
+	local baseChance = self._fireRateBase or 30
+	local randMax = math.max(6, baseChance - math.floor(diff*5))
 	local rand = math.random(1, randMax)
 	if rand == 1 then
+		-- 精度パラメータに基づきspreadに乗数をかける。高い精度ほどspreadが小さい
+		local accuracyLevel = self._accuracyLevel or 5
+		local spreadMultiplier = (11 - accuracyLevel) * 0.2
+		
 		-- spread が大きいほど外れる（精度低）
-		local spread = 3 / (diff + 1)
+		local spread = (3 / (diff + 1)) * spreadMultiplier
 		
 		local offset = Vector3.new(
 			(math.random() - 0.5) * spread * 10,
@@ -234,6 +239,13 @@ end
 function Npc:Start()
 	if self._running then return end
 	self._running = true
+	
+	-- TryShootの精度を決めるランダムなパラメータ: 1(最低) ~ 10(最高)
+	self._accuracyLevel = math.random(1, 10)
+	
+	-- TryShootの頻度を決めるランダムなパラメータ: ベースの確率分母 (小さいほど頻度が高い)
+	self._fireRateBase = math.random(1, 20)
+	
 	self._task = task.spawn(function()
 		RunLoop(self)
 	end)
