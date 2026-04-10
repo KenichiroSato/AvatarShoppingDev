@@ -241,6 +241,80 @@ local function UnfreezeParticipants(participants: { Model })
 	end
 end
 
+-- ===================== 整列 =====================
+
+-- チームメンバーをPositionPart（長方形）の長辺方向に一列に並べ、互いに向き合わせる
+local function LineUpTeam(teamName: string, positionPart: BasePart, lookAtPosition: Vector3)
+	local members = teams[teamName].members
+	if #members == 0 then return end
+
+	-- Partのサイズ・CFrameを取得
+	local partCFrame  = positionPart.CFrame
+	local partSizeX   = positionPart.Size.X  -- 長辺（横方向）
+	local partSizeZ   = positionPart.Size.Z  -- 短辺（奥行き）
+	local partSizeY   = positionPart.Size.Y  -- 高さ（板の厚み）
+
+	-- 長辺の方向（PartのRightVector）に沿って並べる
+	local rightVec = partCFrame.RightVector
+	local center   = partCFrame.Position
+
+	-- メンバー数に応じた間隔を計算（端に余白を持たせる）
+	local count   = #members
+	local margin  = 12  -- 両端の最小余白(studs) ← 中央寄りに調整
+	local usable  = partSizeX - margin * 2
+	local spacing = if count > 1 then usable / (count - 1) else 0
+
+	-- Partの上面（Y + partSizeY/2 + キャラ高さの半分）に乗せる
+	local yOffset = partSizeY / 2 + 3  -- 3 studs = キャラ重心分
+
+	-- 向かい合う方向を計算（lookAtPositionの水平方向）
+	local dirToOpponent = (Vector3.new(lookAtPosition.X, center.Y, lookAtPosition.Z) - Vector3.new(center.X, center.Y, center.Z)).Unit
+	local lookCFrame    = CFrame.new(Vector3.zero, dirToOpponent)
+
+	for i, character in ipairs(members) do
+		local hrp = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not hrp then continue end
+
+		-- 先頭から末尾への offset
+		local t = if count > 1 then (i - 1) / (count - 1) else 0.5
+		local offset = rightVec * (-usable / 2 + t * usable)
+		local pos    = center + offset + Vector3.new(0, yOffset, 0)
+
+		-- CFrame: posに移動 + 相手陣地の方向を向く
+		local cf = CFrame.new(pos) * CFrame.fromMatrix(Vector3.zero, lookCFrame.RightVector, lookCFrame.UpVector)
+
+		-- HRPをアンカーしてから配置（他の処理とかぶるが整列時は必ず]
+		hrp.Anchored = false  -- 一瞬アンアンカーしてPivotToを正常動作させる
+		character:PivotTo(cf)
+		hrp.Anchored = true
+	end
+end
+
+-- 両チームをそれぞれのPositionPartに整列させてフリーズする
+local function LineUpAndFreezeTeams()
+	local battlefield = workspace:FindFirstChild("BattleField")
+	if not battlefield then
+		warn("[LineUp] BattleField not found in Workspace")
+		return
+	end
+
+	local redPart  = battlefield:FindFirstChild("RedPosition")  :: BasePart?
+	local bluePart = battlefield:FindFirstChild("BluePosition") :: BasePart?
+
+	if not redPart or not bluePart then
+		warn("[LineUp] RedPosition or BluePosition not found in BattleField")
+		return
+	end
+
+	-- 赤チーム → 青Partの方向を向く / 青チーム → 赤Partの方向を向く
+	LineUpTeam("red",  redPart,  bluePart.Position)
+	LineUpTeam("blue", bluePart, redPart.Position)
+
+	-- 全参加者をフリーズ（HRP Anchored + WalkSpeed 0）
+	FreezeParticipants()
+	print("[LineUp] Teams lined up and frozen.")
+end
+
 -- ===================== テレポート =====================
 local function TeleportParticipants()
 	local spawnFolder = workspace:FindFirstChild("SpawnPositions", true)
@@ -761,12 +835,17 @@ function BattleManager.Start()
 	ApplyTeamAppearance()
 	task.wait(1) -- 外見適用の完了を待つ
 
-	-- 6. 全員フリーズしてカウントダウン
+	-- 5.6 チームごとに一列整列 & フリーズ（カウントダウン終了まで固定）
+	LineUpAndFreezeTeams()
+	task.wait(0.5) -- 整列アニメ余韻
+
+	-- 6. カウントダウン（フリーズ済み）
 	UpdateBattleStatus(BattleStatus.Countdown)
 	FireCountDownEvent()
 	task.wait(4) -- 3, 2, 1, GO
 
-	-- 7. バトルスタート
+	-- 7. アンフリーズしてバトルスタート
+	UnfreezeParticipants(GetAllParticipants())
 	TrickHandler.StartBattle(BattleManager.OnHit, BattleManager.IsSameTeam, BattleManager.IsParticipant)
 	FireBattleStatus(true)
 	UpdateBattleStatus(BattleStatus.Active)
