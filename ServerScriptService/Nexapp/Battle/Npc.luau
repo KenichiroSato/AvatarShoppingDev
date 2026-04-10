@@ -217,7 +217,6 @@ local function RunLoop(self)
 				end
 
 				self.humanoid:MoveTo(wp.Position)
-				TryShoot(self)
 				local reached = self.humanoid.MoveToFinished:Wait()
 				if not reached then
 					ok = false
@@ -236,6 +235,15 @@ local function RunLoop(self)
 	end
 end
 
+-- TryShootを周期的に呼び出すループ (移動ループとは独立)
+local function ShootLoop(self)
+	local interval = self._shootInterval or 0.5
+	while self._running and self.model.Parent do
+		TryShoot(self)
+		task.wait(interval)
+	end
+end
+
 function Npc:Start()
 	if self._running then return end
 	self._running = true
@@ -246,8 +254,15 @@ function Npc:Start()
 	-- TryShootの頻度を決めるランダムなパラメータ: ベースの確率分母 (小さいほど頻度が高い)
 	self._fireRateBase = math.random(1, 20)
 	
+	-- 射擃周期: 0.3s 〜 1.5s のランダム (個体ごとに固定)
+	self._shootInterval = math.random(3, 8) * 0.1  -- 0.3 〜 1.5 秒
+	
+	-- 移動ループと射擃ループをそれぞれ独立のtaskで起動
 	self._task = task.spawn(function()
 		RunLoop(self)
+	end)
+	self._shootTask = task.spawn(function()
+		ShootLoop(self)
 	end)
 end
 
