@@ -106,6 +106,10 @@ local function FireTimeUpEvent(winner: string)
 	FireParticipants(GetRemoteEvent("TimeUpEvent"), winner)
 end
 
+local function FireHintEvent(message: string, duration: number)
+	FireParticipants(GetRemoteEvent("HintEvent"), message, duration)
+end
+
 local function FireCountDownEvent()
 	FireParticipants(GetRemoteEvent("CountDownEvent"))
 end
@@ -808,6 +812,7 @@ function BattleManager.Start()
 	GetRemoteEvent("OnTeamSelectedEvent")
 	GetRemoteEvent("TeamSelectionEndEvent")
 	GetRemoteEvent("ShowAvatarRouletteEvent")
+	GetRemoteEvent("HintEvent")
 
 	-- 状態リセット
 	battleParticipants.players = {}
@@ -857,6 +862,10 @@ function BattleManager.Start()
 	-- 5.6 チームごとに一列整列 & フリーズ（カウントダウン終了まで固定）
 	LineUpAndFreezeTeams()
 	task.wait(0.5) -- 整列アニメ余韻
+
+		-- 5.7 バトル開始メッセージを参加者に表示（3秒）
+	FireHintEvent("Cast a spell and make them dance!", 3)
+	task.wait(3)
 
 	BuildArena()
 
