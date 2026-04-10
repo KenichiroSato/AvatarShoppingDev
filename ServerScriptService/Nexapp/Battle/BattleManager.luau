@@ -287,6 +287,10 @@ local function LineUpTeam(teamName: string, positionPart: BasePart, lookAtPositi
 		hrp.Anchored = false  -- 一瞬アンアンカーしてPivotToを正常動作させる
 		character:PivotTo(cf)
 		hrp.Anchored = true
+		local player = Players:GetPlayerFromCharacter(character)
+		if player then
+			GetRemoteEvent("TeleportEvent"):FireClient(player)
+		end
 	end
 end
 
@@ -734,6 +738,21 @@ local function RestoreParticipantDescriptions()
 	print("[Appearance] Restored original appearances for " .. #allParts .. " participants")
 end
 
+local currentArenaModel: Model? = nil  -- BuildForNPCで配置したModelを保持
+
+local function BuildArena()
+	local ArenaBuilder = require(script.Parent.ArenaBuilder)
+	currentArenaModel = ArenaBuilder.BuildForNPC()
+end
+
+local function DestroyArena()
+	if currentArenaModel and currentArenaModel.Parent then
+		currentArenaModel:Destroy()
+		print("[ArenaBuilder] Arena model destroyed.")
+	end
+	currentArenaModel = nil
+end
+
 -- ===================== ルーレット表示（既存機能）=====================
 local function ShowRouletteOnClient(allParticipants: { Model }, selection: { Model })
 	local rouletteEvent = GetRemoteEvent("ShowRoulette")
@@ -839,6 +858,8 @@ function BattleManager.Start()
 	LineUpAndFreezeTeams()
 	task.wait(0.5) -- 整列アニメ余韻
 
+	BuildArena()
+
 	-- 6. カウントダウン（フリーズ済み）
 	UpdateBattleStatus(BattleStatus.Countdown)
 	FireCountDownEvent()
@@ -927,6 +948,7 @@ function BattleManager.Stop()
 	TeleportToLobby()
 
 	-- 状態リセット
+	DestroyArena()  -- 配置したNPC用アリーナを削除
 	NpcManager.StopBattle()
 	battleParticipants.npcs    = {}
 	battleParticipants.players = {}
