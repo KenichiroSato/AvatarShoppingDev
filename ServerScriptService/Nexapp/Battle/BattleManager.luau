@@ -339,34 +339,6 @@ end
 
 -- ===================== チーム選択フェーズ =====================
 
--- Fieldの両端CFrameを取得する
-local function GetFieldEndCFrames(): (CFrame, CFrame)
-	local battlefield = workspace:FindFirstChild("BattleField")
-	local field = battlefield and battlefield:FindFirstChild("Field")
-
-	local center = CFrame.new(0, 0, 0)
-	local halfLen = 40
-
-	if field then
-		if field:IsA("BasePart") then
-			center = field.CFrame
-			-- X/Z の長い方を長辺とみなす
-			local size = (field :: BasePart).Size
-			halfLen = math.max(size.X, size.Z) / 2 - 5
-		elseif field:IsA("Model") then
-			local pivot, size = (field :: Model):GetBoundingBox()
-			center = pivot
-			halfLen = math.max(size.X, size.Z) / 2 - 5
-		end
-	end
-
-	-- 青が-Z端、赤が+Z端
-	local blueCFrame = center * CFrame.new(0, 0, -halfLen)
-	local redCFrame  = center * CFrame.new(0, 0,  halfLen)
-	return blueCFrame, redCFrame
-end
-
-
 -- 未選択者を人数が均等になるようチームに振り分ける
 local function BalanceUndecided(undecided: { Model })
 	for _, character in ipairs(undecided) do
@@ -549,19 +521,6 @@ local function ExecuteTeamSelectionPhase()
 	-- 1. チームアバター選出
 	SelectTeamAvatars(allParticipants)
 	CacheTeamAvatars()
-
-	-- 2. Fieldの両端を計算してアバターを配置
-	local blueCF, redCF = GetFieldEndCFrames()
-	if teams.blue.avatar then
-		local facingDir = redCF.Position
-		local pos = blueCF.Position + Vector3.new(0, 1.5, 0)
-		teams.blue.avatar:PivotTo(CFrame.lookAt(pos, Vector3.new(facingDir.X, pos.Y, facingDir.Z)))
-	end
-	if teams.red.avatar then
-		local facingDir = blueCF.Position
-		local pos = redCF.Position + Vector3.new(0, 1.5, 0)
-		teams.red.avatar:PivotTo(CFrame.lookAt(pos, Vector3.new(facingDir.X, pos.Y, facingDir.Z)))
-	end
 
 	-- 2.5. アバタールーレット演出（5秒）
 	-- 全参加者のデータをクライアントに送信し、ViewportFrameで流れるルーレットUIを表示する
