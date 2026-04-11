@@ -444,13 +444,13 @@ end
 ----------------------------------------------------------------------------------------------------
 -- FlyInUIMove
 function BaseGui_:FlyInUIMove()
-	self:AnimateUIMove(self:getAnimMoveOutPos(), self.framePos, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	self:AnimateUIMove(self:getAnimMoveOutPos(), self.framePos, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 end
 ----------------------------------------------------------------------------------------------------
 -- FlyOutUIMove
 function BaseGui_:HideWithFlyOutUIMove()
 	self.state = State.Hiding
-	self:AnimateUIMove(self.framePos, self:getAnimMoveOutPos(), Enum.EasingStyle.Back, Enum.EasingDirection.In)
+	self:AnimateUIMove(self.framePos, self:getAnimMoveOutPos(), Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	task.spawn(function()
 		task.wait(self.animTime)
 		self:setGuiEnabled(false)
@@ -517,9 +517,14 @@ end
 function BaseGui_:getAnimMoveOutPos()
 	if self.flyMoveDir == BaseGui_.FlyMoveDir.Up then
 		return UDim2.fromScale(self.framePos.X.Scale, -1)
-	else
+	elseif self.flyMoveDir == BaseGui_.FlyMoveDir.Down then
 		return UDim2.fromScale(self.framePos.X.Scale, 2)
+	elseif self.flyMoveDir == BaseGui_.FlyMoveDir.Left then
+		return UDim2.fromScale(-1, self.framePos.Y.Scale)
+	elseif self.flyMoveDir == BaseGui_.FlyMoveDir.Right then
+		return UDim2.fromScale(2, self.framePos.Y.Scale)
 	end
+	return UDim2.fromScale(self.framePos.X.Scale, 2) -- fallback
 end
 ----------------------------------------------------------------------------------------------------
 -- SetCloseByPadCancel
