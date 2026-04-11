@@ -21,6 +21,9 @@ Define.LOGIN_BONUS_INTERVAL_TIME = 60 * 60 * 24
 Define.PODIUM_CUTSCENE_TIME = 3
 Define.TIME_UP_DISPLAY_TIME = 5
 
+Define.GEM_HIT_REWARD = 10   -- ヒット1回あたりの獲得Gem数
+Define.GEM_WIN_BONUS  = 50   -- バトル勝利ボーナスGem数
+
 Define.INTERVAL_DURATION = 30
 Define.BATTLE_DURATION = 120
 

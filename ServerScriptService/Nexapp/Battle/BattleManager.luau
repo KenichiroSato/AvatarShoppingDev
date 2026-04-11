@@ -4,6 +4,7 @@ local TrickHandler = require(script.Parent.TrickHandler)
 local PodiumHandler = require(script.Parent.PodiumHandler)
 local WandAssigner = require(script.Parent.WandAssigner)
 local Define = require(game:GetService("ReplicatedFirst").Nexapp.Common.Define)
+local PlayerManager = require(game:GetService("ServerScriptService").Nexapp.Player.PlayerManager)
 
 local BattleManager = {}
 
@@ -112,6 +113,12 @@ end
 
 local function FireCountDownEvent()
 	FireParticipants(GetRemoteEvent("CountDownEvent"))
+end
+
+-- Gem獲得通知を特定プレイヤーに送る
+local function FireGemGetEvent(player: Player, description: string, count: number)
+	print("[GemGetEvent] " .. player.Name .. " got " .. count .. " gems")
+	GetRemoteEvent("GemGetEvent"):FireClient(player, description, count)
 end
 
 -- ===================== 参加者ユーティリティ =====================
@@ -813,6 +820,7 @@ function BattleManager.Start()
 	GetRemoteEvent("TeamSelectionEndEvent")
 	GetRemoteEvent("ShowAvatarRouletteEvent")
 	GetRemoteEvent("HintEvent")
+	GetRemoteEvent("GemGetEvent")
 
 	-- 状態リセット
 	battleParticipants.players = {}
@@ -912,6 +920,16 @@ function BattleManager.OnHit(shooterCharacterName: string, targetCharacterName: 
 
 	UpdateRanking()
 	task.spawn(StunCharacter, targetCharacterName, 6)
+
+	-- シューターがプレイヤーならGem付与 + UI通知
+	local shooterPlayer = Players:FindFirstChild(shooterCharacterName)
+	if shooterPlayer then
+		local pd = PlayerManager.GetPlayerData(shooterPlayer)
+		if pd then
+			pd:AddGem(Define.GEM_HIT_REWARD)
+			FireGemGetEvent(shooterPlayer, "Hit!", Define.GEM_HIT_REWARD)
+		end
+	end
 end
 
 function BattleManager.Stop()
@@ -930,6 +948,20 @@ function BattleManager.Stop()
 	print("[Result] " .. winner .. " (blue=" .. teams.blue.hitCount .. " / red=" .. teams.red.hitCount .. ")")
 
 	FireTimeUpEvent(winner)  -- winnerを一緯に送信
+
+	-- 勝利チームのプレイヤーにGemボーナス
+	if winner ~= "draw" then
+		for _, character in ipairs(teams[winner].members) do
+			local player = Players:GetPlayerFromCharacter(character)
+			if player then
+				local pd = PlayerManager.GetPlayerData(player)
+				if pd then
+					pd:AddGem(Define.GEM_WIN_BONUS)
+					FireGemGetEvent(player, "Win Bonus", Define.GEM_WIN_BONUS)
+				end
+			end
+		end
+	end
 
 	-- 参加者の見た目をバトル前の状態に戻す
 	RestoreParticipantDescriptions()
