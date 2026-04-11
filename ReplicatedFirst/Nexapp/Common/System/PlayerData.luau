@@ -139,6 +139,19 @@ function PlayerData:GetCoinText()
 	local GameUtil = require(ReplicatedFirst.Nexapp.Common.System.GameUtil)
 	return GameUtil.GetCoinText(self:GetCoin())
 end
+----------------------------------------------------------------------------------------------------
+-- GetGem
+function PlayerData:GetGem()
+	return self:GetSaveDataKey(PlayerSaveTable.Keys.Gem) or 0
+end
+-- SetGem
+function PlayerData:SetGem(val: number)
+	self:SetSaveDataKey(PlayerSaveTable.Keys.Gem, val)
+end
+-- AddGem
+function PlayerData:AddGem(val: number)
+	self:SetGem((self:GetGem()) + val)
+end
 
 ----------------------------------------------------------------------------------------------------
 -- GetWornAssets

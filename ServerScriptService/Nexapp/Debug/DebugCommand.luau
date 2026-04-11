@@ -83,6 +83,12 @@ function DebugCommand.Process(player: Player, message: string, _recipient)
 				gp:AddCoin(amount)
 			end
 			return
+		elseif command == "ag" or command == "addgem" then
+			local amount = tonumber(args[3])
+			if amount then
+				gp.playerData:AddGem(amount)
+			end
+			return
 		end
 		
 		-- システム系
