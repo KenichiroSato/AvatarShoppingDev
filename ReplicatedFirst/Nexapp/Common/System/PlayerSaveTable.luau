@@ -10,6 +10,8 @@ data.Keys = {
 	LastLoginBonusTime = "LastLoginBonusTime",
 	WornAssets = "WornAssets",
 	WornBundles = "WornBundles",
+	OwnedWands = "OwnedWands",
+	SelectedWand = "SelectedWand",
 }
 
 data.Template = {
@@ -25,6 +27,8 @@ data.Template = {
 	[data.Keys.LastLoginBonusTime] = 0,
 	[data.Keys.WornAssets] = {},
 	[data.Keys.WornBundles] = {},
+	[data.Keys.OwnedWands] = {},
+	[data.Keys.SelectedWand] = "",
 }
 
 return data

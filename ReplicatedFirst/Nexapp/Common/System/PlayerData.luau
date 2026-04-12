@@ -221,6 +221,39 @@ function PlayerData:ListenToMissionStatusListChanged(func)
 end
 
 ----------------------------------------------------------------------------------------------------
+-- GetOwnedWands
+function PlayerData:GetOwnedWands(): {string}
+	return self:GetSaveDataKey(PlayerSaveTable.Keys.OwnedWands) or {}
+end
+-- SetOwnedWands
+function PlayerData:SetOwnedWands(val: {string})
+	self:SetSaveDataKey(PlayerSaveTable.Keys.OwnedWands, val)
+end
+-- AddOwnedWand
+function PlayerData:AddOwnedWand(wandName: string)
+	local owned = self:GetOwnedWands()
+	table.insert(owned, wandName)
+	self:SetOwnedWands(owned)
+end
+-- HasOwnedWand
+function PlayerData:HasOwnedWand(wandName: string): boolean
+	for _, name in ipairs(self:GetOwnedWands()) do
+		if name == wandName then
+			return true
+		end
+	end
+	return false
+end
+----------------------------------------------------------------------------------------------------
+-- GetSelectedWand
+function PlayerData:GetSelectedWand(): string
+	return self:GetSaveDataKey(PlayerSaveTable.Keys.SelectedWand) or ""
+end
+-- SetSelectedWand
+function PlayerData:SetSelectedWand(wandName: string)
+	self:SetSaveDataKey(PlayerSaveTable.Keys.SelectedWand, wandName)
+end
+----------------------------------------------------------------------------------------------------
 -- Util系
 ----------------------------------------------------------------------------------------------------
 -- 
