@@ -10,6 +10,7 @@ local PlayerManager = require(ServerScriptService.Nexapp.Player.PlayerManager)
 local ServerInstanceManager = require(ServerScriptService.Nexapp.System.ServerInstanceManager)
 local AvatarItemPlacer = require(ServerScriptService.Nexapp.AvatarItem.AvatarItemPlacer)
 local TimeManager = require(ServerScriptService.Nexapp.Battle.TimeManager)
+local WandShopHandler = require(ServerScriptService.Nexapp.Shop.WandShopHandler)
 
 print("Server ModuleLoad end. time:", tick() - startTime)
 
@@ -25,3 +26,4 @@ local avatarItemPlacer = AvatarItemPlacer.new()
 --avatarItemPlacer:PlaceItems()
 
 TimeManager.Start()
+WandShopHandler.Init()
