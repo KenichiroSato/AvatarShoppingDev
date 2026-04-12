@@ -131,6 +131,10 @@ local function FindTarget(self)
 end
 
 local function TryShoot(self)
+	-- WandAssignerによるアサインを待つためlazyに解決する
+	if not self.wand then
+		self.wand = self.model:FindFirstChildWhichIsA("Tool")
+	end
 	if not self.wand then return end
 	if self.model:GetAttribute("IsStunned") then return end
 	

@@ -889,7 +889,10 @@ function BattleManager.Start()
 	UpdateBattleStatus(BattleStatus.Active)
 
 	--GrantBarrierToAllParticipants()
-	WandAssigner.AssignRandomWands(battleParticipants.players)
+	local allParticipants = {}
+	for _, p in ipairs(battleParticipants.players) do table.insert(allParticipants, p) end
+	for _, n in ipairs(battleParticipants.npcs)    do table.insert(allParticipants, n) end
+	WandAssigner.AssignWands(allParticipants)
 
 	print("Battle started! Blue=" .. #teams.blue.members .. " / Red=" .. #teams.red.members)
 	return battleParticipants

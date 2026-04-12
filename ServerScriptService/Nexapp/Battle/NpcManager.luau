@@ -1,9 +1,7 @@
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local NPC_FOLDER = ServerStorage.NPCs
-local WANDS_FOLDER = ReplicatedStorage:FindFirstChild("Wands")
 
 local NpcManager = {}
 local Npc = require(script.Parent:WaitForChild("Npc"))
@@ -59,22 +57,6 @@ function NpcManager.StartBattle(npcNum: number): {Model}
 		local clone = choice:Clone()
 		clone:SetAttribute("TrickTargetNPC", true)
 		clone.Parent = destParent
-		
-		-- Randomly select and attach a wand
-		if WANDS_FOLDER then
-			local wands = {}
-			for _, child in ipairs(WANDS_FOLDER:GetChildren()) do
-				if child:IsA("Tool") then
-					table.insert(wands, child)
-				end
-			end
-			
-			if #wands > 0 then
-				local selectedWand = wands[rng:NextInteger(1, #wands)]
-				local wandClone = selectedWand:Clone()
-				wandClone.Parent = clone
-			end
-		end
 		
 		-- instantiate OOP Npc and start its behavior
 		local npcObj = Npc.new(clone)
