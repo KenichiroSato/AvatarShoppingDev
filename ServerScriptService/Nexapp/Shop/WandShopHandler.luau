@@ -7,6 +7,14 @@ local PlayerManager = require(ServerScriptService.Nexapp.Player.PlayerManager)
 local WandShopHandler = {}
 
 ----------------------------------------------------------------------------------------------------
+local function Announce(player: Player, message: string)
+	local gp = PlayerManager.GetGamePlayer(player)
+	if gp then
+		gp:Announce(message)
+	end
+end
+
+----------------------------------------------------------------------------------------------------
 -- WandDataをName文字列で検索する
 local function findWandDataByName(wandName: string)
 	for _, data in pairs(WandData) do
@@ -57,6 +65,7 @@ local function setupWandShop(wandShop: Model)
 		-- 既に所持済みの場合はSelectedWandの切り替えのみ
 		if pd:HasOwnedWand(wandName) then
 			pd:SetSelectedWand(wandName)
+			Announce(player, "WandEquipped")
 			return
 		end
 
@@ -65,6 +74,7 @@ local function setupWandShop(wandShop: Model)
 		local price = data.GemPrice
 		if currentGem < price then
 			warn("WandShopHandler: not enough gems.", player.Name, "has", currentGem, "/ needs", price)
+			Announce(player, "NotEnoughGems")
 			return
 		end
 
@@ -72,6 +82,8 @@ local function setupWandShop(wandShop: Model)
 		pd:SetGem(currentGem - price)
 		pd:AddOwnedWand(wandName)
 		pd:SetSelectedWand(wandName)
+
+		Announce(player, "WandPurchased")
 
 		print("WandShopHandler: purchased", wandName, "by", player.Name)
 	end)
