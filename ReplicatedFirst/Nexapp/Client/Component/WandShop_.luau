@@ -30,7 +30,7 @@ function WandShop_:Init(ins : Model)
 		return
 	end
 
-	-- TextLabel を取得
+	-- UI要素を取得
 	local weaponStand = ins:FindFirstChild("WeaponStand")
 	if not weaponStand then return end
 	local buttonPart = weaponStand:FindFirstChild("ButtonPart")
@@ -39,23 +39,32 @@ function WandShop_:Init(ins : Model)
 	if not surfaceGui then return end
 	local frame = surfaceGui:FindFirstChild("Frame")
 	if not frame then return end
-	local textLabel = frame:FindFirstChild("TextLabel") :: TextLabel
+	local textLabel = frame:FindFirstChild("GemTextLabel", true) :: TextLabel
 	if not textLabel then return end
+	local gemImageLabel = frame:FindFirstChild("GemImageLabel", true) :: ImageLabel
 
 	-- SaveData が読み込まれるまで待つ
 	self:WaitForSaveDataLoaded()
 
 	local PlayerData = require(ReplicatedFirst.Nexapp.Common.System.PlayerData)
 
+	local defaultLabelSize = textLabel.Size
+
 	local function updateLabel()
 		local owned = PlayerData:HasOwnedWand(wandName)
 		local selected = PlayerData:GetSelectedWand()
 		if not owned then
 			textLabel.Text = "Buy"
+			textLabel.Size = defaultLabelSize
+			if gemImageLabel then gemImageLabel.Visible = true end
 		elseif selected == wandName then
 			textLabel.Text = "Equipped"
+			textLabel.Size = UDim2.new(0.9, 0, 1, 0)
+			if gemImageLabel then gemImageLabel.Visible = false end
 		else
 			textLabel.Text = "Equip"
+			textLabel.Size = UDim2.new(0.9, 0, 1, 0)
+			if gemImageLabel then gemImageLabel.Visible = false end
 		end
 	end
 
