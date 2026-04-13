@@ -36,9 +36,9 @@ local function setupWandShop(wandShop: Model)
 
 	local weaponStand = wandShop:FindFirstChild("WeaponStand")
 	if not weaponStand then return end
-	local buyPart = weaponStand:FindFirstChild("BuyPart")
-	if not buyPart then return end
-	local clickDetector = buyPart:FindFirstChild("BuyClickDetector")
+	local buttonPart = weaponStand:FindFirstChild("ButtonPart")
+	if not buttonPart then return end
+	local clickDetector = buttonPart:FindFirstChild("BuyClickDetector")
 	if not clickDetector then return end
 
 	clickDetector.MouseClick:Connect(function(player: Player)
