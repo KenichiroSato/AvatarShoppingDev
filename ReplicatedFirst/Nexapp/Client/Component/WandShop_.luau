@@ -42,6 +42,8 @@ function WandShop_:Init(ins : Model)
 	local textLabel = frame:FindFirstChild("GemTextLabel", true) :: TextLabel
 	if not textLabel then return end
 	local gemImageLabel = frame:FindFirstChild("GemImageLabel", true) :: ImageLabel
+	local buyButton = frame:FindFirstChild("BuyButton") :: GuiButton
+	if not buyButton then return end
 
 	-- SaveData が読み込まれるまで待つ
 	self:WaitForSaveDataLoaded()
@@ -70,6 +72,11 @@ function WandShop_:Init(ins : Model)
 
 	-- 初回更新
 	updateLabel()
+
+	-- BuyButton クリックでサーバーに購入リクエスト
+	buyButton.Activated:Connect(function()
+		self:SendRemoteEventToServer("RCS_BuyWand", wandName)
+	end)
 
 	-- OwnedWands / SelectedWand の変化を監視
 	self._ownedWandsCallback = PlayerData:ListenToSaveDataParam1Changed(

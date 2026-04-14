@@ -10,6 +10,7 @@ local InstanceManager = require(ReplicatedFirst.Nexsys.Common.InstanceManager)
 local GameUtil = require(ReplicatedFirst.Nexapp.Common.System.GameUtil)
 local ComponentManager = require(ReplicatedFirst.Nexapp.Common.System.ComponentManager)
 local ConfigData = require(ReplicatedFirst.Exdata.ConfigData)
+local WandData = require(ReplicatedFirst.Exdata.WandData)
 
 local ServerScriptService = game:GetService("ServerScriptService")
 local BasePlayer = require(ServerScriptService.Nexsys.Player.BasePlayer)
@@ -223,6 +224,49 @@ function GamePlayer:BulkPurchase(keys: {number}, bundleKeys: {number}?)
 		end
 		MarketplaceService:PromptBulkPurchase(self.Player, items, {})
 	end
+end
+
+----------------------------------------------------------------------------------------------------
+-- BuyWand : クライアントからの購入リクエスト処理 (RCS_BuyWand)
+function GamePlayer:BuyWand(wandName: string)
+	local pd = self.playerData
+	if not pd then return end
+
+	local data = nil
+	for _, d in pairs(WandData) do
+		if d.Name == wandName then
+			data = d
+			break
+		end
+	end
+	if not data then
+		warn("GamePlayer:BuyWand: WandData not found for", wandName)
+		return
+	end
+
+	-- 既に所持済みの場合は装備のみ
+	if pd:HasOwnedWand(wandName) then
+		pd:SetSelectedWand(wandName)
+		self:Announce("WandEquipped")
+		return
+	end
+
+	-- Gem残高チェック
+	local currentGem = pd:GetGem()
+	local price = data.GemPrice
+	if currentGem < price then
+		warn("GamePlayer:BuyWand: not enough gems.", self:GetName(), "has", currentGem, "/ needs", price)
+		self:Announce("NotEnoughGems")
+		return
+	end
+
+	-- 購入処理
+	pd:SetGem(currentGem - price)
+	pd:AddOwnedWand(wandName)
+	pd:SetSelectedWand(wandName)
+	self:Announce("WandPurchased")
+
+	print("GamePlayer:BuyWand: purchased", wandName, "by", self:GetName())
 end
 
 ----------------------------------------------------------------------------------------------------
