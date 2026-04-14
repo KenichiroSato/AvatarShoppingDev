@@ -89,6 +89,9 @@ function DebugCommand.Process(player: Player, message: string, _recipient)
 				gp.playerData:AddGem(amount)
 			end
 			return
+		elseif command == "rsw" then
+			gp.playerData:SetOwnedWands({})
+			gp.playerData:SetSelectedWand("")
 		end
 		
 		-- システム系

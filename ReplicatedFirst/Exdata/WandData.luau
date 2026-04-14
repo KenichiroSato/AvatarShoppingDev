@@ -6,7 +6,7 @@ local module = {
 	Minecraft_Diamond_Sword = {Name = "Minecraft Diamond Sword", GemPrice = 100,  PassId = 1793614883},
 	OverseerSword           = {Name = "OverseerSword",           GemPrice = 100,  PassId = 1793614883},
 	Rainbow_Star_Periastron = {Name = "Rainbow Star Periastron", GemPrice = 100,  PassId = 1793614883},
-	Sword                   = {Name = "Sword",                   GemPrice = 100,  PassId = 1793614883},
+	Sword                   = {Name = "Sword",                   GemPrice = 100,  PassId = 1793312248},
 	Water_sword             = {Name = "Water sword",             GemPrice = 100,  PassId = 1793614883},
 }
 return module
