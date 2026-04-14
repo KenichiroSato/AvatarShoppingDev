@@ -55,12 +55,35 @@ function GamePlayer:Init(player: Player)
 		DebugCommand.Process(player, message, recipient)
 	end)
 
+	-- Robuxゲームパス購入完了コールバック
+	self._gamePassPurchaseConn = MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(purchasedPlayer, gamePassId, wasPurchased)
+		if purchasedPlayer ~= player then return end
+		if not wasPurchased then return end
+		if not self._pendingPassWand then return end
+		if self._pendingPassWand.passId ~= gamePassId then return end
+
+		local pendingWandName = self._pendingPassWand.wandName
+		self._pendingPassWand = nil
+
+		local pd = self.playerData
+		if pd then
+			pd:AddOwnedWand(pendingWandName)
+			pd:SetSelectedWand(pendingWandName)
+			self:Announce("WandPurchased")
+			print("GamePlayer: Robux game pass purchased wand", pendingWandName, "by", self:GetName())
+		end
+	end)
+
 end
 ----------------------------------------------------------------------------------------------------
 -- Terminate
 function GamePlayer:onTerminate(player : Player)
 	self:RecordPlayTime()
 
+	if self._gamePassPurchaseConn then
+		self._gamePassPurchaseConn:Disconnect()
+		self._gamePassPurchaseConn = nil
+	end
 
 	if RunService:IsStudio() then
 		-- 終了が遅くなるのでスキップ
@@ -267,6 +290,45 @@ function GamePlayer:BuyWand(wandName: string)
 	self:Announce("WandPurchased")
 
 	print("GamePlayer:BuyWand: purchased", wandName, "by", self:GetName())
+end
+
+----------------------------------------------------------------------------------------------------
+-- BuyWandRobux : Robuxゲームパスによる購入リクエスト処理 (RCS_BuyWandRobux)
+function GamePlayer:BuyWandRobux(wandName: string)
+	local pd = self.playerData
+	if not pd then return end
+
+	local data = nil
+	for _, d in pairs(WandData) do
+		if d.Name == wandName then
+			data = d
+			break
+		end
+	end
+	if not data then
+		warn("GamePlayer:BuyWandRobux: WandData not found for", wandName)
+		return
+	end
+
+	-- 既にWandを所持済みの場合は装備のみ
+	if pd:HasOwnedWand(wandName) then
+		pd:SetSelectedWand(wandName)
+		self:Announce("WandEquipped")
+		return
+	end
+
+	-- ゲームパス自体をすでに所持している場合は直接付与（複数WandがPassIdを共有するケース対応）
+	if self:HasGamePassAsync(data.PassId) then
+		pd:AddOwnedWand(wandName)
+		pd:SetSelectedWand(wandName)
+		self:Announce("WandPurchased")
+		print("GamePlayer: game pass already owned, granted wand", wandName, "by", self:GetName())
+		return
+	end
+
+	-- ゲームパス購入プロンプトを表示（完了はPromptGamePassPurchaseFinishedで受け取る）
+	self._pendingPassWand = {passId = data.PassId, wandName = wandName}
+	MarketplaceService:PromptGamePassPurchase(self:GetPlayer(), data.PassId)
 end
 
 ----------------------------------------------------------------------------------------------------

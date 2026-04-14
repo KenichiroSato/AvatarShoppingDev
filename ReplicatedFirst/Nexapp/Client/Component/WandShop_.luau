@@ -1,6 +1,7 @@
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ComponentBase = require(ReplicatedFirst.Nexsys.Common.Component.ComponentBase)
 local PlayerSaveTable = require(ReplicatedFirst.Nexapp.Common.System.PlayerSaveTable)
+local WandData = require(ReplicatedFirst.Exdata.WandData)
 
 --- @class WandShop_ : ComponentBase
 local WandShop_ = {}
@@ -16,6 +17,7 @@ end
 
 function WandShop_:Init(ins : Model)
 	print("WandShop Init", ins.Name)
+	self:WaitForSaveDataLoaded()
 
 	-- WeaponStand以外のModelがWandモデル
 	local wandName: string? = nil
@@ -45,10 +47,24 @@ function WandShop_:Init(ins : Model)
 	local buyButton = frame:FindFirstChild("BuyButton") :: GuiButton
 	if not buyButton then return end
 
+	-- RobuxPart UI要素を取得
+	local robuxPart = weaponStand:FindFirstChild("RobuxPart")
+	local robuxSurfaceGui = robuxPart and robuxPart:FindFirstChildOfClass("SurfaceGui")
+	local robuxButton = robuxPart and robuxPart:FindFirstChild("RobuxButton", true) :: GuiButton
+
 	-- SaveData が読み込まれるまで待つ
 	self:WaitForSaveDataLoaded()
 
 	local PlayerData = require(ReplicatedFirst.Nexapp.Common.System.PlayerData)
+
+	-- WandDataからGemPriceを取得
+	local gemPrice: number? = nil
+	for _, d in pairs(WandData) do
+		if d.Name == wandName then
+			gemPrice = d.GemPrice
+			break
+		end
+	end
 
 	local defaultLabelSize = textLabel.Size
 
@@ -56,27 +72,40 @@ function WandShop_:Init(ins : Model)
 		local owned = PlayerData:HasOwnedWand(wandName)
 		local selected = PlayerData:GetSelectedWand()
 		if not owned then
-			textLabel.Text = "Buy"
+			textLabel.Text = gemPrice and tostring(gemPrice) or "Buy"
 			textLabel.Size = defaultLabelSize
 			if gemImageLabel then gemImageLabel.Visible = true end
+			-- 未所持時はRobuxボタンを表示
+			if robuxSurfaceGui then robuxSurfaceGui.Enabled = true end
 		elseif selected == wandName then
 			textLabel.Text = "Equipped"
 			textLabel.Size = UDim2.new(0.9, 0, 1, 0)
 			if gemImageLabel then gemImageLabel.Visible = false end
+			-- 所持済み時はRobuxボタンを非表示
+			if robuxSurfaceGui then robuxSurfaceGui.Enabled = false end
 		else
 			textLabel.Text = "Equip"
 			textLabel.Size = UDim2.new(0.9, 0, 1, 0)
 			if gemImageLabel then gemImageLabel.Visible = false end
+			-- 所持済み時はRobuxボタンを非表示
+			if robuxSurfaceGui then robuxSurfaceGui.Enabled = false end
 		end
 	end
 
 	-- 初回更新
 	updateLabel()
 
-	-- BuyButton クリックでサーバーに購入リクエスト
+	-- BuyButton クリックでサーバーに購入リクエスト（Gem購入）
 	buyButton.Activated:Connect(function()
 		self:SendRemoteEventToServer("RCS_BuyWand", wandName)
 	end)
+
+	-- RobuxButton クリックでサーバーにRobux購入リクエスト
+	if robuxButton then
+		robuxButton.Activated:Connect(function()
+			self:SendRemoteEventToServer("RCS_BuyWandRobux", wandName)
+		end)
+	end
 
 	-- OwnedWands / SelectedWand の変化を監視
 	self._ownedWandsCallback = PlayerData:ListenToSaveDataParam1Changed(
