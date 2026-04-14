@@ -1,3 +1,4 @@
+local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ComponentBase = require(ReplicatedFirst.Nexsys.Common.Component.ComponentBase)
 local PlayerSaveTable = require(ReplicatedFirst.Nexapp.Common.System.PlayerSaveTable)
@@ -51,19 +52,36 @@ function WandShop_:Init(ins : Model)
 	local robuxPart = weaponStand:FindFirstChild("RobuxPart")
 	local robuxSurfaceGui = robuxPart and robuxPart:FindFirstChildOfClass("SurfaceGui")
 	local robuxButton = robuxPart and robuxPart:FindFirstChild("RobuxButton", true) :: GuiButton
+	local robuxTextLabel = robuxPart and robuxPart:FindFirstChild("RobuxTextLabel", true) :: TextLabel
 
 	-- SaveData が読み込まれるまで待つ
 	self:WaitForSaveDataLoaded()
 
 	local PlayerData = require(ReplicatedFirst.Nexapp.Common.System.PlayerData)
 
-	-- WandDataからGemPriceを取得
+	-- WandDataからGemPrice・PassIdを取得
 	local gemPrice: number? = nil
+	local passId: number? = nil
 	for _, d in pairs(WandData) do
 		if d.Name == wandName then
 			gemPrice = d.GemPrice
+			passId = d.PassId
 			break
 		end
+	end
+
+	-- RobuxTextLabelにゲームパスのRobux価格を非同期で表示
+	if robuxTextLabel and passId then
+		task.spawn(function()
+			local ok, info = pcall(function()
+				return MarketplaceService:GetProductInfo(passId, Enum.InfoType.GamePass)
+			end)
+			if ok and info and info.PriceInRobux then
+				robuxTextLabel.Text = tostring(info.PriceInRobux)
+			else
+				warn("WandShop_: failed to get pass price for passId", passId)
+			end
+		end)
 	end
 
 	local defaultLabelSize = textLabel.Size
