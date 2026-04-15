@@ -259,11 +259,16 @@ end
 function PopUp_:ExecuteRSCAnimation(str, baseFrame: Frame, udim2Pos: UDim2, param: SystemTypes.PopUpParam)
 	local targetAbsolutePos = param.ScatterAnimTargetPos
 	local clones = {}
-	local SHOW_TIME = 0.7
-	local MOVE_TIME = 1
+	local SHOW_TIME = 0.5
+	local MOVE_TIME = 0.7
 	local parent = baseFrame.Parent
 
-	for i = 1, 20 do
+	-- ScatterCount / ScatterRadiusMin / ScatterRadiusMax でカスタマイズ可能
+	local count       = (param and param.ScatterCount)      or 20
+	local radiusMin   = (param and param.ScatterRadiusMin)  or 10
+	local radiusMax   = (param and param.ScatterRadiusMax)  or 200
+
+	for i = 1, count do
 		local cframe = baseFrame:Clone()
 		cframe.Visible = true
 		cframe.Position = udim2Pos
@@ -271,14 +276,12 @@ function PopUp_:ExecuteRSCAnimation(str, baseFrame: Frame, udim2Pos: UDim2, para
 		table.insert(clones, cframe)
 	end
 
-
 	local relativePosition = targetAbsolutePos - parent.AbsolutePosition
 	local targetPos = UDim2.fromOffset(relativePosition.X, relativePosition.Y)
 
 	for _, frame in ipairs(clones) do
-
 		task.spawn(function()
-			PopUp_:moveInCircle(frame, baseFrame, math.random(10, 200), math.random(-7 , 7))
+			PopUp_:moveInCircle(frame, baseFrame, math.random(radiusMin, radiusMax), math.random(-7, 7))
 			task.wait(SHOW_TIME)
 
 			local tweenInfo = TweenInfo.new(MOVE_TIME,
