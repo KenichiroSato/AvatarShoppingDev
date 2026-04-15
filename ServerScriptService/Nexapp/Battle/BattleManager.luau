@@ -959,8 +959,11 @@ function BattleManager.Stop()
 			if player then
 				local pd = PlayerManager.GetPlayerData(player)
 				if pd then
-					pd:AddGem(Define.GEM_WIN_BONUS)
-					FireGemGetEvent(player, "Win Bonus", Define.GEM_WIN_BONUS, false)
+					task.spawn(function()
+						task.wait(2)
+						pd:AddGem(Define.GEM_WIN_BONUS)
+						FireGemGetEvent(player, "Win Bonus", Define.GEM_WIN_BONUS, false)
+					end)
 				end
 			end
 		end

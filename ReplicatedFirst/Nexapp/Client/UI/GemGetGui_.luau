@@ -124,7 +124,7 @@ local function Init(self, gui: ScreenGui)
 
 		-- Gemアイコンがバナーからカウンターへ飛ぶ演出
 		task.spawn(function()
-			task.wait(0.1)
+			task.wait(0.5)
 			playGemFlyAnimation()
 		end)
 
