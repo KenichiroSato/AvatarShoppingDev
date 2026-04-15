@@ -116,9 +116,9 @@ local function FireCountDownEvent()
 end
 
 -- Gem獲得通知を特定プレイヤーに送る
-local function FireGemGetEvent(player: Player, description: string, count: number)
+local function FireGemGetEvent(player: Player, description: string, count: number, playSE: boolean)
 	print("[GemGetEvent] " .. player.Name .. " got " .. count .. " gems")
-	GetRemoteEvent("GemGetEvent"):FireClient(player, description, count)
+	GetRemoteEvent("GemGetEvent"):FireClient(player, description, count, playSE)
 end
 
 -- ===================== 参加者ユーティリティ =====================
@@ -930,7 +930,7 @@ function BattleManager.OnHit(shooterCharacterName: string, targetCharacterName: 
 		local pd = PlayerManager.GetPlayerData(shooterPlayer)
 		if pd then
 			pd:AddGem(Define.GEM_HIT_REWARD)
-			FireGemGetEvent(shooterPlayer, "Hit!", Define.GEM_HIT_REWARD)
+			FireGemGetEvent(shooterPlayer, "Hit!", Define.GEM_HIT_REWARD, true)
 		end
 	end
 end
@@ -960,7 +960,7 @@ function BattleManager.Stop()
 				local pd = PlayerManager.GetPlayerData(player)
 				if pd then
 					pd:AddGem(Define.GEM_WIN_BONUS)
-					FireGemGetEvent(player, "Win Bonus", Define.GEM_WIN_BONUS)
+					FireGemGetEvent(player, "Win Bonus", Define.GEM_WIN_BONUS, false)
 				end
 			end
 		end

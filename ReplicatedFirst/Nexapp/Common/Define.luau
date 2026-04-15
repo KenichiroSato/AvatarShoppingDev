@@ -25,6 +25,6 @@ Define.GEM_HIT_REWARD = 10   -- ヒット1回あたりの獲得Gem数
 Define.GEM_WIN_BONUS  = 50   -- バトル勝利ボーナスGem数
 
 Define.INTERVAL_DURATION = 30
-Define.BATTLE_DURATION = 120
+Define.BATTLE_DURATION = 90
 
 return Define
