@@ -64,9 +64,16 @@ function WandAssigner.AssignWands(participants: {Model})
 				end
 			end
 
-			-- SelectedWandが未設定 or 見つからない場合はランダム
+			-- SelectedWandが未設定 or 見つからない場合はNormalWandを使用
 			if not wandTool then
-				wandTool = validWands[rng:NextInteger(1, #validWands)]
+				local wandsFolder = ReplicatedStorage:FindFirstChild("Wands")
+				if wandsFolder then
+					wandTool = wandsFolder:FindFirstChild("NormalWand") :: Tool?
+				end
+				-- NormalWandも見つからない場合はランダム
+				if not wandTool then
+					wandTool = validWands[rng:NextInteger(1, #validWands)]
+				end
 			end
 
 			equipWand(character, wandTool)
