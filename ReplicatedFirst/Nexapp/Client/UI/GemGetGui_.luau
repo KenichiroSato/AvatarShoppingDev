@@ -104,7 +104,7 @@ local function Init(self, gui: ScreenGui)
 
 	local showCoroutine: thread? = nil
 
-	gemGetEvent.OnClientEvent:Connect(function(description: string, count: number, playSE: boolean)
+	gemGetEvent.OnClientEvent:Connect(function(description: string, count: number, playSeName: string?)
 		-- 前の表示があればキャンセル
 		if showCoroutine then
 			coroutine.close(showCoroutine)
@@ -117,9 +117,9 @@ local function Init(self, gui: ScreenGui)
 		countLabel.TextTransparency = 0
 		--frame.Visible = true
 		self:Show()
-		if playSE then
+		if playSeName then
 			local SoundManager_ = require(ReplicatedFirst.Nexsys.Client.SoundManager_)
-			SoundManager_.PlaySEByName("Boxing Bell")
+			SoundManager_.PlaySEByName(playSeName)
 		end
 
 		-- Gemアイコンがバナーからカウンターへ飛ぶ演出

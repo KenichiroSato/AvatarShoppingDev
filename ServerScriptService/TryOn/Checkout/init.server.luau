@@ -24,6 +24,34 @@ local remotes = ReplicatedStorage.TryOn.Remotes
 local bulkPurchaseRemote = remotes.BulkPurchase
 local purchaseRemote = remotes.Purchase
 
+local GEM_PURCHASE_BONUS = 500
+
+local function getRemoteEvent(name: string): RemoteEvent
+	local folder = ReplicatedStorage:FindFirstChild("RemoteEvent")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "RemoteEvent"
+		folder.Parent = ReplicatedStorage
+	end
+	local event = folder:FindFirstChild(name)
+	if not event then
+		event = Instance.new("RemoteEvent")
+		event.Name = name
+		event.Parent = folder
+	end
+	return event :: RemoteEvent
+end
+
+local function giveAvatarPurchaseBonus(player: Player)
+local PlayerManager = require(ServerScriptService.Nexapp.Player.PlayerManager)
+	local gp = PlayerManager.GetGamePlayer(player)
+	if not gp then return end
+	local pd = gp.playerData
+	if not pd then return end
+	pd:AddGem(GEM_PURCHASE_BONUS)
+	getRemoteEvent("GemGetEvent"):FireClient(player, "Bonus with purchase", GEM_PURCHASE_BONUS, "Fanfare")
+end
+
 local function onPurchaseEvent(player: Player, itemId: number, itemType: Enum.MarketplaceProductType)
 	print("onPurchaseEvent:", itemId, itemType)
 	if not validateNumber(itemId) then
@@ -68,3 +96,20 @@ end
 
 purchaseRemote.OnServerEvent:Connect(onPurchaseEvent)
 bulkPurchaseRemote.OnServerEvent:Connect(onBulkPurchaseEvent)
+
+-- アバターアイテム単品購入ボーナス
+MarketplaceService.PromptPurchaseFinished:Connect(function(player: Player, _assetId: number, wasPurchased: boolean)
+	if not wasPurchased then return end
+	giveAvatarPurchaseBonus(player)
+end)
+
+-- バンドル購入ボーナス
+MarketplaceService.PromptBundlePurchaseFinished:Connect(function(player: Player, _bundleId: number, wasPurchased: boolean)
+	if not wasPurchased then return end
+	giveAvatarPurchaseBonus(player)
+end)
+
+-- カート一括購入ボーナス (クライアントから通知)
+getRemoteEvent("AvatarBulkPurchaseBonusEvent").OnServerEvent:Connect(function(player: Player)
+	giveAvatarPurchaseBonus(player)
+end)

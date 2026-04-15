@@ -42,6 +42,7 @@ local function onBulkPurchaseFinished(
 	end
 
 	-- Remove all the items that were successfully purchased from the cart
+	local purchasedCount = 0
 	for _, item in result.Items do
 		if item.status ~= Enum.MarketplaceItemPurchaseStatus.Success then
 			continue
@@ -49,6 +50,13 @@ local function onBulkPurchaseFinished(
 
 		local id = tonumber(item.id) :: number
 		Cart.removeItem(id, item.type)
+		purchasedCount += 1
+	end
+
+	-- 購入成功したアイテムがあればサーバーにGemボーナスを通知
+	if purchasedCount > 0 then
+		local bonusRemote = ReplicatedStorage:WaitForChild("RemoteEvent"):WaitForChild("AvatarBulkPurchaseBonusEvent")
+		bonusRemote:FireServer()
 	end
 end
 
