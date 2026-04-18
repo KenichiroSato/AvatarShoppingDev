@@ -37,6 +37,7 @@ local BattleStatus = {
 local currentBattleStatus = BattleStatus.Idle
 local playerRemovingConnection: RBXScriptConnection?
 local joinedPlayers: { [Player]: boolean } = {}  -- 「参加する」ボタンを押したプレイヤーのセット
+local chosenAvatars: { Model } = {} -- "Choose my Avatar"チケットで立候補したアバター
 
 -- ===================== RemoteEvent =====================
 local function GetRemoteEvent(eventName: string): RemoteEvent
@@ -56,16 +57,67 @@ local function GetRemoteEvent(eventName: string): RemoteEvent
 	return event
 end
 
--- BattleJoinEventのリスナを設定する(初回かつ一度だけ呈負する)
-local joinEventConnection: RBXScriptConnection?
-local function SetupJoinEvent()
-	if joinEventConnection then return end
-	local ev = GetRemoteEvent("BattleJoinEvent")
-	joinEventConnection = ev.OnServerEvent:Connect(function(player: Player)
+-- BattleJoinEvent等のリスナを設定する
+local eventsSetupDone = false
+local function SetupEvents()
+	if eventsSetupDone then return end
+	eventsSetupDone = true
+	
+	-- リモートイベントの事前生成
+	GetRemoteEvent("HideChooseMyAvatarEvent")
+	
+	local joinEv = GetRemoteEvent("BattleJoinEvent")
+	joinEv.OnServerEvent:Connect(function(player: Player)
 		-- バトルがアクティブ中は受付けない
 		if currentBattleStatus ~= BattleStatus.Idle then return end
 		joinedPlayers[player] = true
 		print("[Join] " .. player.Name .. " joined the next battle")
+	end)
+
+	local chooseEv = GetRemoteEvent("OnChooseMyAvatarEvent")
+	chooseEv.OnServerEvent:Connect(function(player: Player)
+		if currentBattleStatus ~= BattleStatus.Preparing and currentBattleStatus ~= BattleStatus.Idle and currentBattleStatus ~= BattleStatus.TeamSelection then 
+			-- TeamSelection フェーズ（ルーレット中など）も含まれるようにする
+			-- 厳密には、ExecuteTeamSelectionPhase()中だが、currentBattleStatusはTeamSelectionになっているか？
+			-- 実際はExecuteTeamSelectionPhase内でTransitioningからTeamSelection等に変わるかもしれない。
+			-- ひとまず、選ばれる数が2未満かチェックする。
+		end
+		
+		if #chosenAvatars >= 2 then
+			return -- 既に2人選ばれている
+		end
+		
+		-- playerが参加者にいるか確認
+		local character = player.Character
+		if not character then return end
+		
+		local inParticipants = false
+		for _, c in ipairs(battleParticipants.players) do
+			if c == character then inParticipants = true break end
+		end
+		if not inParticipants then return end
+		
+		-- チケットチェック
+		local gp = PlayerManager.GetGamePlayer(player)
+		if not gp then return end
+		local pd = gp:GetPlayerData()
+		if not pd then return end
+		
+		local tickets = pd:GetChooseAvatarTicket()
+		if tickets > 0 then
+			-- 重複立候補チェック
+			for _, c in ipairs(chosenAvatars) do
+				if c == character then return end
+			end
+			
+			pd:SetChooseAvatarTicket(tickets - 1)
+			table.insert(chosenAvatars, character)
+			print("[ChooseMyAvatar] " .. player.Name .. " used a ticket! Remaining: " .. (tickets - 1))
+			
+			if #chosenAvatars >= 2 then
+				FireParticipants(GetRemoteEvent("HideChooseMyAvatarEvent"))
+			end
+		end
 	end)
 end
 
@@ -561,9 +613,29 @@ local function SelectTeamAvatars(allParticipants: { Model })
 		pool[i], pool[j] = pool[j], pool[i]
 	end
 
-	teams.blue.avatar = pool[1]
-	-- 万が一参加者が1人しかいない(NPCも生成されなかった)場合は、同じ人を選ばずにnilにする
-	teams.red.avatar  = pool[2]
+	-- chosenAvatars を優先
+	local selected = {}
+	for _, avatar in ipairs(chosenAvatars) do
+		-- pool 内に見つかれば selected に入れる
+		for i, p in ipairs(pool) do
+			if p == avatar then
+				table.insert(selected, p)
+				table.remove(pool, i)
+				break
+			end
+		end
+		if #selected >= 2 then break end
+	end
+	
+	-- 残りを pool から補充
+	while #selected < 2 and #pool > 0 do
+		table.insert(selected, pool[1])
+		table.remove(pool, 1)
+	end
+
+	teams.blue.avatar = selected[1]
+	-- 万が一参加者が1人しかいない場合は、同じ人を選ばずにnilにする
+	teams.red.avatar  = selected[2]
 
 	local bName = teams.blue.avatar and teams.blue.avatar.Name or "None"
 	local rName = teams.red.avatar and teams.red.avatar.Name or "None"
@@ -607,11 +679,9 @@ end
 local function ExecuteTeamSelectionPhase()
 	local allParticipants = GetAllParticipants()
 
-	-- 1. チームアバター選出
-	SelectTeamAvatars(allParticipants)
-	CacheTeamAvatars()
+	chosenAvatars = {} -- リセット
 
-	-- 2.5. アバタールーレット演出（5秒）
+	-- アバタールーレット演出（5秒間に先行開始）
 	-- 全参加者のデータをクライアントに送信し、ViewportFrameで流れるルーレットUIを表示する
 	local participantData = {}
 	for _, char in ipairs(allParticipants) do
@@ -621,8 +691,14 @@ local function ExecuteTeamSelectionPhase()
 		if player then userId = player.UserId end
 		table.insert(participantData, { Name = char.Name, IsNpc = isNpc, UserId = userId })
 	end
+	
+	-- ルーレットイベント送信後、一定時間受け付け
 	FireParticipants(GetRemoteEvent("ShowAvatarRouletteEvent"), participantData)
 	task.wait(5) -- ルーレット演出の時間
+
+	-- 1. チームアバター選出
+	SelectTeamAvatars(allParticipants)
+	CacheTeamAvatars()
 
 	-- 3. アバターを含めた全員が UI でチームを選択
 	RunTeamSelectionPhase(allParticipants)
@@ -812,7 +888,6 @@ function BattleManager.Start()
 	print("BattleManager.Start")
 	UpdateBattleStatus(BattleStatus.Preparing)
 	PodiumHandler.Reset()
-	SetupJoinEvent() -- 参加イベントリスナを一度だけ登録
 
 	-- RemoteEventの事前生成 (クライアントのWaitForChild漏れを防ぐ)
 	GetRemoteEvent("ShowTeamSelectionEvent")
@@ -1020,7 +1095,7 @@ end
 
 playerRemovingConnection = Players.PlayerRemoving:Connect(OnPlayerRemoving)
 
--- モジュール読み込み時に即座実行し、BattleJoinEventを事前生成
-SetupJoinEvent()
+-- モジュール読み込み時に即座実行し、イベントを事前生成
+SetupEvents()
 
 return BattleManager

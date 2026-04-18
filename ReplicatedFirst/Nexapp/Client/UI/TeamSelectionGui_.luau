@@ -5,17 +5,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Player = Players.LocalPlayer
+local MarketplaceService = game:GetService("MarketplaceService")
 local SoundManager_ = require(ReplicatedFirst.Nexsys.Client.SoundManager_)
 local UIManager_ = require(ReplicatedFirst.Nexsys.Client.UIManager_)
+local PlayerData = require(ReplicatedFirst.Nexapp.Common.System.PlayerData)
 
 local TeamSelectionGui_ = {}
 TeamSelectionGui_.__index = TeamSelectionGui_
+
+local CHOOSE_AVATAR_TICKET_DPO_ID = 3577494456
 
 local screenGui: ScreenGui? = nil
 local _connectionShow: RBXScriptConnection? = nil
 local _connectionEnd: RBXScriptConnection? = nil
 local _rouletteGui: ScreenGui? = nil
 local _connectionRoulette: RBXScriptConnection? = nil
+local _connectionHideRouletteButton: RBXScriptConnection? = nil
 
 --========================
 -- Private: アバタールーレット演出
@@ -254,6 +259,39 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 	-- ===== スクロールアニメーション =====
 	SoundManager_.PlaySEByName("DrumRoll")
 
+	-- "Choose my Avatar" ボタンを追加
+	local chooseBtn = Instance.new("TextButton")
+	chooseBtn.Name = "ChooseMyAvatarBtn"
+	chooseBtn.Size = UDim2.new(0, 240, 0, 60)
+	chooseBtn.Position = UDim2.new(0.5, -120, 1, -100)
+	chooseBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+	chooseBtn.TextColor3 = Color3.fromRGB(20, 10, 0)
+	chooseBtn.Font = Enum.Font.FredokaOne
+	chooseBtn.TextScaled = true
+	chooseBtn.Text = "Choose my Avatar\n(Ticket: " .. (PlayerData:GetChooseAvatarTicket() or 0) .. ")"
+	chooseBtn.ZIndex = 300
+	chooseBtn.Parent = bg
+	local chooseCorner = Instance.new("UICorner")
+	chooseCorner.CornerRadius = UDim.new(0, 12)
+	chooseCorner.Parent = chooseBtn
+
+	-- 押した時の処理
+	chooseBtn.MouseButton1Click:Connect(function()
+		local tickets = PlayerData:GetChooseAvatarTicket() or 0
+		if tickets > 0 then
+			-- 使用イベント送信
+			local remoteEventFolder = ReplicatedStorage:WaitForChild("RemoteEvent")
+			local chooseEv = remoteEventFolder:FindFirstChild("OnChooseMyAvatarEvent")
+			if chooseEv and chooseEv:IsA("RemoteEvent") then
+				chooseEv:FireServer()
+			end
+			chooseBtn.Visible = false
+		else
+			-- 購入ダイアログ表示
+			MarketplaceService:PromptProductPurchase(Player, CHOOSE_AVATAR_TICKET_DPO_ID)
+		end
+	end)
+
 	-- フェーズ1: 最初SLOW_START秒は高速でスクロール
 	local phase1Distance = (endOffsetX - startOffsetX) * 0.7
 	local phase1Tween = TweenService:Create(scrollFrame,
@@ -283,6 +321,8 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 		-- title と cards も同時にフェード
 		TweenService:Create(title, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 		TweenService:Create(clipFrame, TweenInfo.new(0.5), { GroupTransparency = 1 }):Play()
+		TweenService:Create(chooseBtn, TweenInfo.new(0.5), { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
+		
 		fadeOut:Play()
 		fadeOut.Completed:Connect(function()
 			if _rouletteGui then
@@ -571,6 +611,18 @@ function TeamSelectionGui_.Setup()
 		_connectionRoulette = rouletteEvent.OnClientEvent:Connect(function(participantData)
 			print("TeamSelectionGui: Received ShowAvatarRouletteEvent, participants=", #participantData)
 			ShowAvatarRoulette(participantData)
+		end)
+	end
+	
+	local hideChooseEvent = remoteEventFolder:WaitForChild("HideChooseMyAvatarEvent", 10)
+	if hideChooseEvent and hideChooseEvent:IsA("RemoteEvent") then
+		_connectionHideRouletteButton = hideChooseEvent.OnClientEvent:Connect(function()
+			if _rouletteGui then
+				local btn = _rouletteGui:FindFirstChild("ChooseMyAvatarBtn", true)
+				if btn and btn:IsA("GuiObject") then
+					btn.Visible = false
+				end
+			end
 		end)
 	end
 end

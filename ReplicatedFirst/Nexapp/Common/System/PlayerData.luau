@@ -254,6 +254,15 @@ function PlayerData:SetSelectedWand(wandName: string)
 	self:SetSaveDataKey(PlayerSaveTable.Keys.SelectedWand, wandName)
 end
 ----------------------------------------------------------------------------------------------------
+-- GetChooseAvatarTicket
+function PlayerData:GetChooseAvatarTicket(): number
+	return self:GetSaveDataKey(PlayerSaveTable.Keys.ChooseAvatarTicket) or 0
+end
+-- SetChooseAvatarTicket
+function PlayerData:SetChooseAvatarTicket(amount: number)
+	self:SetSaveDataKey(PlayerSaveTable.Keys.ChooseAvatarTicket, amount)
+end
+----------------------------------------------------------------------------------------------------
 -- Util系
 ----------------------------------------------------------------------------------------------------
 -- 
