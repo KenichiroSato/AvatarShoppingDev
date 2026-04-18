@@ -92,6 +92,11 @@ function DebugCommand.Process(player: Player, message: string, _recipient)
 		elseif command == "rsw" then
 			gp.playerData:SetOwnedWands({})
 			gp.playerData:SetSelectedWand("")
+		elseif command == "st" then
+			local amount = tonumber(args[3])
+			if amount then
+				gp.playerData:SetUseAvatarTicket(amount)
+			end
 		end
 		
 		-- システム系

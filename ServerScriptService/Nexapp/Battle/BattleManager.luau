@@ -57,6 +57,16 @@ local function GetRemoteEvent(eventName: string): RemoteEvent
 	return event
 end
 
+-- バトル参加者のプレイヤーにのみ FireClient するユーティリティ
+local function FireParticipants(event: RemoteEvent, ...)
+	for _, character in ipairs(battleParticipants.players) do
+		local player = Players:GetPlayerFromCharacter(character)
+		if player then
+			event:FireClient(player, ...)
+		end
+	end
+end
+
 -- BattleJoinEvent等のリスナを設定する
 local eventsSetupDone = false
 local function SetupEvents()
@@ -122,16 +132,6 @@ local function SetupEvents()
 end
 
 -- ===================== Remote Fire =====================
-
--- バトル参加者のプレイヤーにのみ FireClient するユーティリティ
-local function FireParticipants(event: RemoteEvent, ...)
-	for _, character in ipairs(battleParticipants.players) do
-		local player = Players:GetPlayerFromCharacter(character)
-		if player then
-			event:FireClient(player, ...)
-		end
-	end
-end
 
 local function FireBattlePhaseUpdate(targetPlayer: Player?)
 	local ev = GetRemoteEvent("BattlePhaseUpdate")
