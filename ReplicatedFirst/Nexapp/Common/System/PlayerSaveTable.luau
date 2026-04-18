@@ -12,7 +12,7 @@ data.Keys = {
 	WornBundles = "WornBundles",
 	OwnedWands = "OwnedWands",
 	SelectedWand = "SelectedWand",
-	ChooseAvatarTicket = "ChooseAvatarTicket",
+	UseAvatarTicket = "UseAvatarTicket",
 }
 
 data.Template = {
@@ -30,7 +30,7 @@ data.Template = {
 	[data.Keys.WornBundles] = {},
 	[data.Keys.OwnedWands] = {},
 	[data.Keys.SelectedWand] = "",
-	[data.Keys.ChooseAvatarTicket] = 0,
+	[data.Keys.UseAvatarTicket] = 0,
 }
 
 return data

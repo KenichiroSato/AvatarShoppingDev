@@ -37,7 +37,7 @@ local BattleStatus = {
 local currentBattleStatus = BattleStatus.Idle
 local playerRemovingConnection: RBXScriptConnection?
 local joinedPlayers: { [Player]: boolean } = {}  -- 「参加する」ボタンを押したプレイヤーのセット
-local chosenAvatars: { Model } = {} -- "Choose my Avatar"チケットで立候補したアバター
+local useMyAvatarList: { Model } = {} -- "Use my Avatar"チケットで立候補したアバター
 
 -- ===================== RemoteEvent =====================
 local function GetRemoteEvent(eventName: string): RemoteEvent
@@ -64,7 +64,7 @@ local function SetupEvents()
 	eventsSetupDone = true
 	
 	-- リモートイベントの事前生成
-	GetRemoteEvent("HideChooseMyAvatarEvent")
+	GetRemoteEvent("HideUseMyAvatarEvent")
 	
 	local joinEv = GetRemoteEvent("BattleJoinEvent")
 	joinEv.OnServerEvent:Connect(function(player: Player)
@@ -74,7 +74,7 @@ local function SetupEvents()
 		print("[Join] " .. player.Name .. " joined the next battle")
 	end)
 
-	local chooseEv = GetRemoteEvent("OnChooseMyAvatarEvent")
+	local chooseEv = GetRemoteEvent("OnUseMyAvatarEvent")
 	chooseEv.OnServerEvent:Connect(function(player: Player)
 		if currentBattleStatus ~= BattleStatus.Preparing and currentBattleStatus ~= BattleStatus.Idle and currentBattleStatus ~= BattleStatus.TeamSelection then 
 			-- TeamSelection フェーズ（ルーレット中など）も含まれるようにする
@@ -83,7 +83,7 @@ local function SetupEvents()
 			-- ひとまず、選ばれる数が2未満かチェックする。
 		end
 		
-		if #chosenAvatars >= 2 then
+		if #useMyAvatarList >= 2 then
 			return -- 既に2人選ばれている
 		end
 		
@@ -103,19 +103,19 @@ local function SetupEvents()
 		local pd = gp:GetPlayerData()
 		if not pd then return end
 		
-		local tickets = pd:GetChooseAvatarTicket()
+		local tickets = pd:GetUseAvatarTicket()
 		if tickets > 0 then
 			-- 重複立候補チェック
-			for _, c in ipairs(chosenAvatars) do
+			for _, c in ipairs(useMyAvatarList) do
 				if c == character then return end
 			end
 			
-			pd:SetChooseAvatarTicket(tickets - 1)
-			table.insert(chosenAvatars, character)
-			print("[ChooseMyAvatar] " .. player.Name .. " used a ticket! Remaining: " .. (tickets - 1))
+			pd:SetUseAvatarTicket(tickets - 1)
+			table.insert(useMyAvatarList, character)
+			print("[UseMyAvatar] " .. player.Name .. " used a ticket! Remaining: " .. (tickets - 1))
 			
-			if #chosenAvatars >= 2 then
-				FireParticipants(GetRemoteEvent("HideChooseMyAvatarEvent"))
+			if #useMyAvatarList >= 2 then
+				FireParticipants(GetRemoteEvent("HideUseMyAvatarEvent"))
 			end
 		end
 	end)
@@ -613,9 +613,9 @@ local function SelectTeamAvatars(allParticipants: { Model })
 		pool[i], pool[j] = pool[j], pool[i]
 	end
 
-	-- chosenAvatars を優先
+	-- useMyAvatarList を優先
 	local selected = {}
-	for _, avatar in ipairs(chosenAvatars) do
+	for _, avatar in ipairs(useMyAvatarList) do
 		-- pool 内に見つかれば selected に入れる
 		for i, p in ipairs(pool) do
 			if p == avatar then
@@ -679,7 +679,7 @@ end
 local function ExecuteTeamSelectionPhase()
 	local allParticipants = GetAllParticipants()
 
-	chosenAvatars = {} -- リセット
+	useMyAvatarList = {} -- リセット
 
 	-- アバタールーレット演出（5秒間に先行開始）
 	-- 全参加者のデータをクライアントに送信し、ViewportFrameで流れるルーレットUIを表示する

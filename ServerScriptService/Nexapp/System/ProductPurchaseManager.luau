@@ -6,7 +6,7 @@ local PlayerManager = require(ServerScriptService.Nexapp.Player.PlayerManager)
 
 local ProductPurchaseManager = {}
 
-local CHOOSE_AVATAR_TICKET_DPO_ID = 3577494456
+local USE_AVATAR_TICKET_DPO_ID = 3577494456
 
 function ProductPurchaseManager.ProcessReceipt(receiptInfo)
 	local playerId = receiptInfo.PlayerId
@@ -24,12 +24,12 @@ function ProductPurchaseManager.ProcessReceipt(receiptInfo)
 	end
 
 	-- チケット購入
-	if productId == CHOOSE_AVATAR_TICKET_DPO_ID then
+	if productId == USE_AVATAR_TICKET_DPO_ID then
 		local pd = gp:GetPlayerData()
 		if pd then
-			local currentTickets = pd:GetChooseAvatarTicket()
-			pd:SetChooseAvatarTicket(currentTickets + 1)
-			print("ProductPurchaseManager: Player " .. player.Name .. " bought ChooseAvatarTicket. Now has: " .. tostring(currentTickets + 1))
+			local currentTickets = pd:GetUseAvatarTicket()
+			pd:SetUseAvatarTicket(currentTickets + 1)
+			print("ProductPurchaseManager: Player " .. player.Name .. " bought UseAvatarTicket. Now has: " .. tostring(currentTickets + 1))
 			return Enum.ProductPurchaseDecision.PurchaseGranted
 		end
 	end

@@ -13,7 +13,7 @@ local PlayerData = require(ReplicatedFirst.Nexapp.Common.System.PlayerData)
 local TeamSelectionGui_ = {}
 TeamSelectionGui_.__index = TeamSelectionGui_
 
-local CHOOSE_AVATAR_TICKET_DPO_ID = 3577494456
+local USE_AVATAR_TICKET_DPO_ID = 3577494456
 
 local screenGui: ScreenGui? = nil
 local _connectionShow: RBXScriptConnection? = nil
@@ -259,36 +259,36 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 	-- ===== スクロールアニメーション =====
 	SoundManager_.PlaySEByName("DrumRoll")
 
-	-- "Choose my Avatar" ボタンを追加
-	local chooseBtn = Instance.new("TextButton")
-	chooseBtn.Name = "ChooseMyAvatarBtn"
-	chooseBtn.Size = UDim2.new(0, 240, 0, 60)
-	chooseBtn.Position = UDim2.new(0.5, -120, 1, -100)
-	chooseBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
-	chooseBtn.TextColor3 = Color3.fromRGB(20, 10, 0)
-	chooseBtn.Font = Enum.Font.FredokaOne
-	chooseBtn.TextScaled = true
-	chooseBtn.Text = "Choose my Avatar\n(Ticket: " .. (PlayerData:GetChooseAvatarTicket() or 0) .. ")"
-	chooseBtn.ZIndex = 300
-	chooseBtn.Parent = bg
-	local chooseCorner = Instance.new("UICorner")
-	chooseCorner.CornerRadius = UDim.new(0, 12)
-	chooseCorner.Parent = chooseBtn
+	-- "Use my Avatar" ボタンを追加
+	local useBtn = Instance.new("TextButton")
+	useBtn.Name = "UseMyAvatarBtn"
+	useBtn.Size = UDim2.new(0, 240, 0, 60)
+	useBtn.Position = UDim2.new(0.5, -120, 1, -100)
+	useBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+	useBtn.TextColor3 = Color3.fromRGB(20, 10, 0)
+	useBtn.Font = Enum.Font.FredokaOne
+	useBtn.TextScaled = true
+	useBtn.Text = "Use my Avatar\n(Ticket: " .. (PlayerData:GetUseAvatarTicket() or 0) .. ")"
+	useBtn.ZIndex = 300
+	useBtn.Parent = bg
+	local useCorner = Instance.new("UICorner")
+	useCorner.CornerRadius = UDim.new(0, 12)
+	useCorner.Parent = useBtn
 
 	-- 押した時の処理
-	chooseBtn.MouseButton1Click:Connect(function()
-		local tickets = PlayerData:GetChooseAvatarTicket() or 0
+	useBtn.MouseButton1Click:Connect(function()
+		local tickets = PlayerData:GetUseAvatarTicket() or 0
 		if tickets > 0 then
 			-- 使用イベント送信
 			local remoteEventFolder = ReplicatedStorage:WaitForChild("RemoteEvent")
-			local chooseEv = remoteEventFolder:FindFirstChild("OnChooseMyAvatarEvent")
-			if chooseEv and chooseEv:IsA("RemoteEvent") then
-				chooseEv:FireServer()
+			local useEv = remoteEventFolder:FindFirstChild("OnUseMyAvatarEvent")
+			if useEv and useEv:IsA("RemoteEvent") then
+				useEv:FireServer()
 			end
-			chooseBtn.Visible = false
+			useBtn.Visible = false
 		else
 			-- 購入ダイアログ表示
-			MarketplaceService:PromptProductPurchase(Player, CHOOSE_AVATAR_TICKET_DPO_ID)
+			MarketplaceService:PromptProductPurchase(Player, USE_AVATAR_TICKET_DPO_ID)
 		end
 	end)
 
@@ -321,7 +321,7 @@ local function ShowAvatarRoulette(participantData: { { Name: string, IsNpc: bool
 		-- title と cards も同時にフェード
 		TweenService:Create(title, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 		TweenService:Create(clipFrame, TweenInfo.new(0.5), { GroupTransparency = 1 }):Play()
-		TweenService:Create(chooseBtn, TweenInfo.new(0.5), { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
+		TweenService:Create(useBtn, TweenInfo.new(0.5), { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
 		
 		fadeOut:Play()
 		fadeOut.Completed:Connect(function()
@@ -614,11 +614,11 @@ function TeamSelectionGui_.Setup()
 		end)
 	end
 	
-	local hideChooseEvent = remoteEventFolder:WaitForChild("HideChooseMyAvatarEvent", 10)
-	if hideChooseEvent and hideChooseEvent:IsA("RemoteEvent") then
-		_connectionHideRouletteButton = hideChooseEvent.OnClientEvent:Connect(function()
+	local hideUseEvent = remoteEventFolder:WaitForChild("HideUseMyAvatarEvent", 10)
+	if hideUseEvent and hideUseEvent:IsA("RemoteEvent") then
+		_connectionHideRouletteButton = hideUseEvent.OnClientEvent:Connect(function()
 			if _rouletteGui then
-				local btn = _rouletteGui:FindFirstChild("ChooseMyAvatarBtn", true)
+				local btn = _rouletteGui:FindFirstChild("UseMyAvatarBtn", true)
 				if btn and btn:IsA("GuiObject") then
 					btn.Visible = false
 				end
