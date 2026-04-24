@@ -2,6 +2,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SocialService = game:GetService("SocialService")
 local BaseGui_ = require(ReplicatedFirst.Nexsys.Client.BaseGui_)
@@ -36,6 +37,13 @@ local function Init(self, gui: ScreenGui)
 	-- BackImage 常時回転
 	RunService.Heartbeat:Connect(function(dt)
 		backImage.Rotation = backImage.Rotation + ROTATE_DEG_PER_SEC * dt
+	end)
+
+	-- バトル中は非表示
+	local battlePhaseEvent = ReplicatedStorage:WaitForChild("RemoteEvent"):WaitForChild("BattlePhaseUpdate") :: RemoteEvent
+	battlePhaseEvent.OnClientEvent:Connect(function(phase: string)
+		local hideUI = phase == "Transitioning" or phase == "TeamSelection" or phase == "Countdown" or phase == "Active"
+		gui.Enabled = not hideUI
 	end)
 
 	-- セッション内に一度だけ報酬を受け取れる
