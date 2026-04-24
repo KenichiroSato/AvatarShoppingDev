@@ -955,7 +955,7 @@ function BattleManager.Start()
 	-- 6. カウントダウン（フリーズ済み）
 	UpdateBattleStatus(BattleStatus.Countdown)
 	FireCountDownEvent()
-	task.wait(4) -- 3, 2, 1, GO
+	task.wait(7) -- 3, 2, 1, GO
 
 	-- 7. アンフリーズしてバトルスタート
 	UnfreezeParticipants(GetAllParticipants())

@@ -31,6 +31,10 @@ local function Init(self, gui : ScreenGui)
 	
 	countDownEvent.OnClientEvent:Connect(function()
 		self:Show()
+		
+		textLabel.Text = "Tap where you want to shoot"
+		task.wait(3)
+
 		self:PlaySEByName("CountDown") -- Assuming a sound exists or logic to play it
 		
 		textLabel.Text = "3"
