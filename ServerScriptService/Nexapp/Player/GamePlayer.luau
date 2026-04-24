@@ -370,7 +370,7 @@ function GamePlayer:OnInviteFriendsSent()
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local gemGetEvent = ReplicatedStorage.RemoteEvent:FindFirstChild("GemGetEvent")
 	if gemGetEvent then
-		gemGetEvent:FireClient(self:GetPlayer(), "友達を招待！", GEM_AMOUNT, "Bell")
+		gemGetEvent:FireClient(self:GetPlayer(), "Invited friends!", GEM_AMOUNT, "Fanfare")
 	end
 
 	print("GamePlayer:OnInviteFriendsSent: gave", GEM_AMOUNT, "gems to", self:GetName())

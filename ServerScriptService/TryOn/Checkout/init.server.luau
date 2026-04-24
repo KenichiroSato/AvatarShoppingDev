@@ -24,7 +24,7 @@ local remotes = ReplicatedStorage.TryOn.Remotes
 local bulkPurchaseRemote = remotes.BulkPurchase
 local purchaseRemote = remotes.Purchase
 
-local GEM_PURCHASE_BONUS = 500
+local GEM_PURCHASE_BONUS = 1000
 
 local function getRemoteEvent(name: string): RemoteEvent
 	local folder = ReplicatedStorage:FindFirstChild("RemoteEvent")
