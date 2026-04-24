@@ -356,5 +356,25 @@ function GamePlayer:OnTimeBonusClaim(level)
 	return self.stayBonus:OnClaim(level)
 end
 ----------------------------------------------------------------------------------------------------
+-- OnInviteFriendsSent : 友達招待を送ったときに500Gemプレゼント（セッション内1回）
+function GamePlayer:OnInviteFriendsSent()
+	if self._hasReceivedInviteGemReward then return end
+	self._hasReceivedInviteGemReward = true
+
+	local pd = self.playerData
+	if not pd then return end
+
+	local GEM_AMOUNT = 500
+	pd:AddGem(GEM_AMOUNT)
+
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local gemGetEvent = ReplicatedStorage.RemoteEvent:FindFirstChild("GemGetEvent")
+	if gemGetEvent then
+		gemGetEvent:FireClient(self:GetPlayer(), "友達を招待！", GEM_AMOUNT, "Bell")
+	end
+
+	print("GamePlayer:OnInviteFriendsSent: gave", GEM_AMOUNT, "gems to", self:GetName())
+end
+----------------------------------------------------------------------------------------------------
 
 return GamePlayer
